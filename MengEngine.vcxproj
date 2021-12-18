@@ -1,0 +1,327 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6CFBC7B3-0F8A-4C64-AA5F-9051B208D67A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>SkinnedMesh</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>MengEngine</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\study\gitclone\eigen-3.4.0;C:\d3d12book\MyDemos\MengEngine;C:\d3d12book\MyDemos\MengEngine\Assimp;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\d3d12book\MyDemos\MengEngine\Assimp;C:\d3d12book\MyDemos\CharacterAnimation\Assimp;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\d3d12book\MyDemos\MengEngine\Assimp;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\d3d12book\MyDemos\MengEngine\Assimp;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS=1;WIN32;_DEBUG;_WINDOWS;NOMINMAX;_DISABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>assimp-vc141-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS;_DISABLE_EXTENDED_ALIGNED_STORAGE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>C:\d3d12book\MyDemos\MengEngine\Assimp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc141-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Animation\BlendingJob.cpp" />
+    <ClCompile Include="Animation\Character\Character.cpp" />
+    <ClCompile Include="Animation\Character\CharacterController.cpp" />
+    <ClCompile Include="Animation\IKAimJob.cpp" />
+    <ClCompile Include="Animation\IKTwoBoneJob.cpp" />
+    <ClCompile Include="Animation\LegController.cpp" />
+    <ClCompile Include="Animation\LocalToModelJob.cpp" />
+    <ClCompile Include="Animation\MotionAnalyzer.cpp" />
+    <ClCompile Include="Animation\Character\RootMotion.cpp" />
+    <ClCompile Include="Animation\SamplingJob.cpp" />
+    <ClCompile Include="Animation\Skeleton.cpp" />
+    <ClCompile Include="Animation\Utils.cpp" />
+    <ClCompile Include="Common\Camera.cpp" />
+    <ClCompile Include="Common\Color.cpp" />
+    <ClCompile Include="Common\d3dApp.cpp" />
+    <ClCompile Include="Common\d3dUtil.cpp" />
+    <ClCompile Include="Common\DDSTextureLoader.cpp" />
+    <ClCompile Include="Common\Debug.cpp" />
+    <ClCompile Include="Common\GameTimer.cpp" />
+    <ClCompile Include="Common\GeometryGenerator.cpp" />
+    <ClCompile Include="Common\MathHelper.cpp" />
+    <ClCompile Include="Common\SimpleMath.cpp" />
+    <ClCompile Include="GUI\imgui.cpp" />
+    <ClCompile Include="GUI\imgui_demo.cpp" />
+    <ClCompile Include="GUI\imgui_draw.cpp" />
+    <ClCompile Include="GUI\imgui_impl_dx12.cpp" />
+    <ClCompile Include="GUI\imgui_impl_win32.cpp" />
+    <ClCompile Include="GUI\imgui_tables.cpp" />
+    <ClCompile Include="GUI\imgui_widgets.cpp" />
+    <ClCompile Include="Renderer\Component.cpp" />
+    <ClCompile Include="Renderer\FrameResource.cpp" />
+    <ClCompile Include="Graphics\CommandAllocatorPool.cpp" />
+    <ClCompile Include="Graphics\CommandContext.cpp" />
+    <ClCompile Include="Graphics\CommandListManager.cpp" />
+    <ClCompile Include="Graphics\CommandQueue.cpp" />
+    <ClCompile Include="Graphics\DescriptorHeap.cpp" />
+    <ClCompile Include="Graphics\DynamicResource.cpp" />
+    <ClCompile Include="Graphics\GpuBuffer.cpp" />
+    <ClCompile Include="Graphics\GpuRenderTexture.cpp" />
+    <ClCompile Include="Graphics\GpuRenderTextureColor.cpp" />
+    <ClCompile Include="Graphics\GpuRenderTextureDepth.cpp" />
+    <ClCompile Include="Graphics\GpuResource.cpp" />
+    <ClCompile Include="Graphics\GpuResourceDescriptor.cpp" />
+    <ClCompile Include="Graphics\GpuTexture.cpp" />
+    <ClCompile Include="Graphics\GpuTexture2D.cpp" />
+    <ClCompile Include="Graphics\PipelineState.cpp" />
+    <ClCompile Include="Graphics\RenderDevice.cpp" />
+    <ClCompile Include="Graphics\RootSignature.cpp" />
+    <ClCompile Include="Graphics\Shader.cpp" />
+    <ClCompile Include="Graphics\ShaderResource.cpp" />
+    <ClCompile Include="Graphics\ShaderResourceBinding.cpp" />
+    <ClCompile Include="Graphics\ShaderResourceBindingUtility.cpp" />
+    <ClCompile Include="Graphics\ShaderResourceCache.cpp" />
+    <ClCompile Include="Graphics\ShaderResourceLayout.cpp" />
+    <ClCompile Include="Graphics\ShaderVariable.cpp" />
+    <ClCompile Include="Graphics\StaleResourceWrapper.cpp" />
+    <ClCompile Include="Graphics\SwapChain.cpp" />
+    <ClCompile Include="Graphics\VariableSizeAllocationsManager.cpp" />
+    <ClCompile Include="Animation\LoadFBX.cpp" />
+    <ClCompile Include="Animation\LoadM3d.cpp" />
+    <ClCompile Include="Math\Random.cpp" />
+    <ClCompile Include="Renderer\GameObject.cpp" />
+    <ClCompile Include="Renderer\Material.cpp" />
+    <ClCompile Include="Renderer\Mesh.cpp" />
+    <ClCompile Include="Renderer\Renderer.cpp" />
+    <ClCompile Include="Renderer\ResourceManager.cpp" />
+    <ClCompile Include="Renderer\VertexFactory.cpp" />
+    <ClCompile Include="Animation\Animation.cpp" />
+    <ClCompile Include="Engine.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Animation\AnimationKeyframe.h" />
+    <ClInclude Include="Animation\BlendingJob.h" />
+    <ClInclude Include="Animation\Character\Character.h" />
+    <ClInclude Include="Animation\Character\CharacterController.h" />
+    <ClInclude Include="Animation\GradientBandInterpolator.h" />
+    <ClInclude Include="Animation\IKAimJob.h" />
+    <ClInclude Include="Animation\IKTwoBoneJob.h" />
+    <ClInclude Include="Animation\Interpolator.h" />
+    <ClInclude Include="Animation\LegController.h" />
+    <ClInclude Include="Animation\LocalToModelJob.h" />
+    <ClInclude Include="Animation\MotionAnalyzer.h" />
+    <ClInclude Include="Animation\Character\RootMotion.h" />
+    <ClInclude Include="Animation\MotionAnalyzerBackwards.h" />
+    <ClInclude Include="Animation\SamplingJob.h" />
+    <ClInclude Include="Animation\Skeleton.h" />
+    <ClInclude Include="Animation\Utils.h" />
+    <ClInclude Include="Common\Align.h" />
+    <ClInclude Include="Common\Camera.h" />
+    <ClInclude Include="Common\Color.h" />
+    <ClInclude Include="Common\d3dApp.h" />
+    <ClInclude Include="Common\d3dUtil.h" />
+    <ClInclude Include="Common\d3dx12.h" />
+    <ClInclude Include="Common\DDSTextureLoader.h" />
+    <ClInclude Include="Common\Debug.h" />
+    <ClInclude Include="Common\GameTimer.h" />
+    <ClInclude Include="Common\GeometryGenerator.h" />
+    <ClInclude Include="Common\HashUtils.hpp" />
+    <ClInclude Include="Common\MathHelper.h" />
+    <ClInclude Include="Common\RingBuffer.hpp" />
+    <ClInclude Include="Common\SimpleMath.h" />
+    <ClInclude Include="Common\Singleton.hpp" />
+    <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="GUI\imconfig.h" />
+    <ClInclude Include="GUI\imgui.h" />
+    <ClInclude Include="GUI\imgui_impl_dx12.h" />
+    <ClInclude Include="GUI\imgui_impl_win32.h" />
+    <ClInclude Include="GUI\imgui_internal.h" />
+    <ClInclude Include="GUI\imstb_rectpack.h" />
+    <ClInclude Include="GUI\imstb_textedit.h" />
+    <ClInclude Include="GUI\imstb_truetype.h" />
+    <ClInclude Include="Renderer\Component.h" />
+    <ClInclude Include="Renderer\FrameResource.h" />
+    <ClInclude Include="Graphics\CommandAllocatorPool.h" />
+    <ClInclude Include="Graphics\CommandContext.h" />
+    <ClInclude Include="Graphics\CommandListManager.h" />
+    <ClInclude Include="Graphics\CommandQueue.h" />
+    <ClInclude Include="Graphics\DescriptorHeap.h" />
+    <ClInclude Include="Graphics\DynamicResource.h" />
+    <ClInclude Include="Graphics\GpuBuffer.h" />
+    <ClInclude Include="Graphics\GpuRenderTexture.h" />
+    <ClInclude Include="Graphics\GpuRenderTextureColor.h" />
+    <ClInclude Include="Graphics\GpuRenderTextureDepth.h" />
+    <ClInclude Include="Graphics\GpuResource.h" />
+    <ClInclude Include="Graphics\GpuResourceDescriptor.h" />
+    <ClInclude Include="Graphics\GpuTexture.h" />
+    <ClInclude Include="Graphics\GpuTexture2D.h" />
+    <ClInclude Include="Graphics\GraphicsEnums.h" />
+    <ClInclude Include="Graphics\PipelineState.h" />
+    <ClInclude Include="Graphics\RenderDevice.h" />
+    <ClInclude Include="Graphics\RootSignature.h" />
+    <ClInclude Include="Graphics\Shader.h" />
+    <ClInclude Include="Graphics\ShaderResource.h" />
+    <ClInclude Include="Graphics\ShaderResourceBinding.h" />
+    <ClInclude Include="Graphics\ShaderResourceBindingUtility.h" />
+    <ClInclude Include="Graphics\ShaderResourceCache.h" />
+    <ClInclude Include="Graphics\ShaderResourceLayout.h" />
+    <ClInclude Include="Graphics\ShaderVariable.h" />
+    <ClInclude Include="Graphics\StaleResourceWrapper.h" />
+    <ClInclude Include="Graphics\SwapChain.h" />
+    <ClInclude Include="Graphics\VariableSizeAllocationsManager.h" />
+    <ClInclude Include="Math\BoundingPlane.h" />
+    <ClInclude Include="Math\BoundingSphere.h" />
+    <ClInclude Include="Math\Common.h" />
+    <ClInclude Include="Math\Matrix3.h" />
+    <ClInclude Include="Math\Matrix4.h" />
+    <ClInclude Include="Math\Quaternion.h" />
+    <ClInclude Include="Math\Random.h" />
+    <ClInclude Include="Math\Scalar.h" />
+    <ClInclude Include="Math\Transform.h" />
+    <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Math\VectorMath.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Animation\LoadFBX.h" />
+    <ClInclude Include="Animation\LoadM3d.h" />
+    <ClInclude Include="Renderer\GameObject.h" />
+    <ClInclude Include="Renderer\Material.h" />
+    <ClInclude Include="Renderer\Mesh.h" />
+    <ClInclude Include="Renderer\MeshRenderer.h" />
+    <ClInclude Include="Renderer\Renderer.h" />
+    <ClInclude Include="Renderer\ResourceManager.h" />
+    <ClInclude Include="Renderer\SceneManager.h" />
+    <ClInclude Include="Renderer\VertexFactory.h" />
+    <ClInclude Include="Animation\Animation.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Common\SimpleMath.inl" />
+    <None Include="Math\Functions.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
