@@ -348,8 +348,10 @@ VertexOut VS(VertexIn vin)
 float4 PS(VertexOut pin) : SV_Target
 {
 	// Fetch the material data.
-	float4 diffuseAlbedo = BaseColorTex.Sample(gsamLinearWrap, pin.TexC);
-	diffuseAlbedo = float4(0.8f, 0.8f, 0.8f, 1.0f);
+	float4	diffuseAlbedo = float4(0.8f, 0.8f, 0.8f, 1.0f);
+#ifdef OPAQUE
+	diffuseAlbedo = BaseColorTex.Sample(gsamLinearWrap, pin.TexC);
+#endif
 	float4 metallic = MetallicFactor;
 	float  roughness = 0.5;
 	float3 fresnelR0 = float3(0.05f, 0.05f, 0.05f);

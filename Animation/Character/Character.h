@@ -15,7 +15,7 @@ namespace Animation
 
 		Transform transform_;
 
-		Matrix root = XMMatrixScaling(0.05f, 0.05f, -0.05f) * XMMatrixRotationY(MathHelper::Pi);
+		Matrix root = XMMatrixScaling(0.05f, 0.05f, -0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;
 
 		Skeleton skeleton_;
 
@@ -26,6 +26,11 @@ namespace Animation
 		RootMotion root_motion_;
 
 		CharacterController character_controller_;
+
+		// Root Motion
+		Vector2 target_velocity_;
+
+		bool transition_;
 
 		LegController leg_controller_;
 

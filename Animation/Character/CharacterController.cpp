@@ -10,6 +10,7 @@ namespace Animation
 
 	void CharacterController::Update(const Vector3& _direction, float _t)
 	{
+		target_direction = _direction;
 		UpdateFacingDirection(_direction, _t);
 		UpdateVelocity(_direction, _t);
 	}
@@ -21,21 +22,7 @@ namespace Animation
 
 	void CharacterController::UpdateVelocity(const Vector3& _direction, float _t)
 	{
-		//Vector3 direction = _direction.Normalized();
 		Vector3 target_velocity = _direction.Normalized();;
-		//if (direction == Vector3::Zero) {
-		//	target_velocity = Vector3::Zero;
-		//}
-		//else {
-		//	target_velocity = direction;
-		//}
-
-		//Vector3 velocity_change = target_velocity - velocity_x;
-
-		//if (velocity_change.Length() > max_velocity_change) {
-		//	velocity_change = velocity_change.Normalized() * max_velocity_change;
-		//}
-		//velocity_x += velocity_change * _t * 2;
 		UpdateSpringCharacter(position.x, velocity.x, acceleration.x, target_velocity.x, 0.5, _t);
 		UpdateSpringCharacter(position.y, velocity.y, acceleration.y, target_velocity.y, 0.5, _t);
 		UpdateSpringCharacter(position.z, velocity.z, acceleration.z, target_velocity.z, 0.5, _t);

@@ -17,6 +17,7 @@ namespace Animation
 
 		Vector3 acceleration = Vector3::Zero;
 
+		Vector3 target_direction = Vector3::Zero;
 
 		void Update(const Vector3& _direction, float _t);
 

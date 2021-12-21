@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\study\gitclone\eigen-3.4.0;C:\d3d12book\MyDemos\MengEngine;C:\d3d12book\MyDemos\MengEngine\Assimp;$(IncludePath)</IncludePath>
+    <IncludePath>C:\d3d12book\MyDemos\MengEngine\DirectXTex\DirectXTex;C:\study\gitclone\eigen-3.4.0;C:\d3d12book\MyDemos\MengEngine;C:\d3d12book\MyDemos\MengEngine\Assimp;$(IncludePath)</IncludePath>
     <LibraryPath>C:\d3d12book\MyDemos\MengEngine\Assimp;C:\d3d12book\MyDemos\CharacterAnimation\Assimp;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -107,11 +107,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS=1;WIN32;_DEBUG;_WINDOWS;NOMINMAX;_DISABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\d3d12book\MyDemos\MengEngine\DirectXTex\DirectXTex;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc141-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc141-mtd.lib;DirectXTex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\d3d12book\MyDemos\MengEngine\DirectXTex;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -254,6 +256,7 @@
     <ClInclude Include="Common\RingBuffer.hpp" />
     <ClInclude Include="Common\SimpleMath.h" />
     <ClInclude Include="Common\Singleton.hpp" />
+    <ClInclude Include="Common\stb_image.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
     <ClInclude Include="GUI\imconfig.h" />
     <ClInclude Include="GUI\imgui.h" />

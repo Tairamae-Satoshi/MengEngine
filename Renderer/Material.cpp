@@ -38,10 +38,10 @@ void Material::CreateSRB(Graphics::PipelineState* PSO)
 		{
 			materialCB->Set(m_ConstantBuffer);
 		}
-		else
+		/*else
 		{
 			LOG_ERROR("Shader variable: cbMaterial not found.");
-		}
+		}*/
 		
 		Graphics::ShaderVariable* baseColorTexVar = m_SRB->GetVariableByName(Graphics::SHADER_TYPE_PIXEL, "BaseColorTex");
 		Graphics::ShaderVariable* metallicRoughnessTexVar = m_SRB->GetVariableByName(Graphics::SHADER_TYPE_PIXEL, "MetallicRoughnessTex");
@@ -56,10 +56,10 @@ void Material::CreateSRB(Graphics::PipelineState* PSO)
 			{
 				variable->Set(texDescriptor);
 			}
-			else
+			/*else
 			{
 				LOG_ERROR("Shader variable not found");
-			}
+			}*/
 		};
 
 		if (m_BaseColorTextureDescriptor != nullptr)

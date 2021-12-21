@@ -16,7 +16,9 @@
 #include "Animation/GradientBandInterpolator.h"
 #include "Animation/MotionAnalyzer.h"
 #include "Animation/Character/Character.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "Common/stb_image.h"
+#include "DirectXTex/DirectXTex/DirectXTex.h"
 using namespace Animation;
 
 
@@ -272,6 +274,12 @@ bool Engine::Initialize()
 
 	shaderCI.FilePath = L"Shaders\\Default.hlsl";
 	shaderCI.EntryPoint = "VS";
+	const D3D_SHADER_MACRO opaqueDefines[] =
+	{
+		"OPAQUE", "1",
+		NULL, NULL
+	};
+	shaderCI.d3dMacros = opaqueDefines;
 	shaderCI.Desc.ShaderType = Graphics::SHADER_TYPE_VERTEX;
 	m_StandardVS = std::make_shared<Graphics::Shader>(shaderCI);
 
@@ -323,8 +331,8 @@ bool Engine::Initialize()
 		lightVariable->Set(m_LightCB);
 
 	//
-// PSO for ShadowMap pass.
-//
+	// PSO for ShadowMap pass.
+	//
 	shaderCI.FilePath = L"Shaders\\Shadows.hlsl";
 	shaderCI.EntryPoint = "VS";
 	shaderCI.Desc.ShaderType = Graphics::SHADER_TYPE_VERTEX;
@@ -650,13 +658,13 @@ void Engine::OnKeyboardInput(const GameTimer& gt)
 
 	// Character Control
 	if (GetAsyncKeyState(VK_UP) & 0x8000)
-		character.character_controller_.Update(Vector3(0.0f, 0.0f, 1.0f), gt.DeltaTime());
-	else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
 		character.character_controller_.Update(Vector3(0.0f, 0.0f, -1.0f), gt.DeltaTime());
+	else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+		character.character_controller_.Update(Vector3(0.0f, 0.0f, 1.0f), gt.DeltaTime());
 	else if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-		character.character_controller_.Update(Vector3(1.0f, 0.0f, 0.0f), gt.DeltaTime());
-	else if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
 		character.character_controller_.Update(Vector3(-1.0f, 0.0f, 0.0f), gt.DeltaTime());
+	else if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
+		character.character_controller_.Update(Vector3(1.0f, 0.0f, 0.0f), gt.DeltaTime());
 	else
 		character.character_controller_.Update(Vector3(0.0f, 0.0f, 0.0f), gt.DeltaTime());
 
@@ -849,7 +857,7 @@ void Engine::BuildShapeGeometry()
 {
     GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(1.0f, 1.0f, 1.0f, 3);
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(1.0f, 1.0f, 10, 10);
 	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
 	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
     GeometryGenerator::MeshData quad = geoGen.CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
@@ -1108,8 +1116,15 @@ void Engine::LoadSkinnedModel()
 
 void Engine::BuildMaterials()
 {
+	TexMetadata metadata;
+	ScratchImage image;
+	HRESULT hr = LoadFromWICFile(L"Contents/Textures/GreyWhiteBlock.jpg", WIC_FLAGS::WIC_FLAGS_NONE, &metadata, image);
+	const Image* pImages = image.GetImages();
+	std::shared_ptr<Graphics::GpuTexture2D> tileTex = std::make_shared<Graphics::GpuTexture2D>(pImages[0].width, pImages[0].height, pImages[0].format, pImages[0].rowPitch, pImages[0].pixels);
+
+
 	DirectX::XMFLOAT4 oneVector = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	auto tile0 = std::make_unique<Material>(0.5f, 0.5f, oneVector, oneVector, ResourceManager::GetSingleton().GetDefaultWhiteTex(),
+	auto tile0 = std::make_unique<Material>(0.5f, 0.5f, oneVector, oneVector, tileTex,
 		nullptr, nullptr, nullptr, nullptr);
 	mMaterials["tile0"] = std::move(tile0);
 
@@ -1129,7 +1144,7 @@ void Engine::BuildRenderItems()
 
     auto gridRitem = std::make_unique<RenderItem>();
     gridRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&gridRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0, 0.0, 0.0));
+	XMStoreFloat4x4(&gridRitem->World, XMMatrixScaling(100.0f, 1.0f, 100.0f) * XMMatrixTranslation(0.0, 0.0, 0.0));
 	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	gridRitem->ObjCBIndex = objCBIndex++;
 	gridRitem->Mat = mMaterials["tile0"].get();
@@ -1217,14 +1232,14 @@ void Engine::BuildGUI()
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 	// Setup Dear ImGui style
-	//ImGui::StyleColorsDark();
-	ImGui::StyleColorsClassic();
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
 
 	// Setup Platform/Renderer backends
 	Graphics::GPUDescriptorHeap& cbvsrvuavHeap = Graphics::RenderDevice::GetSingleton().GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	Graphics::DescriptorHeapAllocation allocation = cbvsrvuavHeap.Allocate(2);
+	Graphics::DescriptorHeapAllocation allocation = cbvsrvuavHeap.Allocate(1);
 	ImGui_ImplWin32_Init(mhMainWnd);
-	ImGui_ImplDX12_Init(m_RenderDevice->GetD3D12Device(), 3,
+	ImGui_ImplDX12_Init(m_RenderDevice->GetD3D12Device(), 1,
 		DXGI_FORMAT_R8G8B8A8_UNORM, cbvsrvuavHeap.GetD3D12DescriptorHeap(),
 		allocation.GetCpuHandle(),
 		allocation.GetGpuHandle());

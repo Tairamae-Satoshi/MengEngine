@@ -2,7 +2,10 @@
 
 namespace Animation
 {
-	Character::Character() {}
+	Character::Character() :
+		target_velocity_(Vector2::Zero),
+		transition_(false)
+	{}
 
 	bool Character::Initialize()
 	{
@@ -79,8 +82,18 @@ namespace Animation
 
 	void Character::UpdateBlendingMotion(BlendingJob& _blending_job)
 	{
-		std::vector<float> weights = _blending_job.interpolator->Interpolate(Vector2(_blending_job.interpolator->maxVx * character_controller_.velocity.x,
-			_blending_job.interpolator->minVy * character_controller_.velocity.z));
+		Vector2 velocity = Vector2(character_controller_.velocity.x, character_controller_.velocity.z);
+		std::vector<float> weights = _blending_job.interpolator->Interpolate(velocity, true);
+		
+		Vector2 new_target_velocity = Vector2(character_controller_.target_direction.x, character_controller_.target_direction.z);
+		if (new_target_velocity !=target_velocity_){
+			transition_ = true;
+			target_velocity_ = new_target_velocity;
+		}
+		else{
+			transition_ = false;
+		}
+
 		for (int i = 0; i < _blending_job.layers.size(); ++i)
 		{
 			_blending_job.layers[i].weight = weights[i];
@@ -172,13 +185,16 @@ namespace Animation
 
 	void Character::UpdateRootMotion(bool transition)
 	{
-		root_motion_.ApplyRootTransform(locals_[0].mRot.mValue, locals_[0].mTrans.mValue, transition);
+		root_motion_.ApplyRootTransform(locals_[0].mRot.mValue, locals_[0].mTrans.mValue, transition/*||transition_*/);
 		locals_[0].mRot.mValue = root_motion_.rotaion;
 		locals_[0].mTrans.mValue.x = root_motion_.position.x;
 		locals_[0].mTrans.mValue.z = root_motion_.position.z;
-		//char out[50];
-		//sprintf(out, "x = %f, z = %f", locals_[0].mTrans.mValue.x, locals_[0].mTrans.mValue.z);
-		//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 231, out);
+		char out[50];
+		sprintf(out, "transition_ = %f", transition_);
+		if (transition_)
+		{
+			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 231, out);
+		}
 		//root = root_motion_.transform;
 
 	}

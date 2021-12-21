@@ -12,7 +12,6 @@ namespace Animation
 
 	void RootMotion::ApplyRootTransform(const Quaternion& q, const Vector3& t, bool _transition)
 	{
-		//char out[50];
 		//Matrix motion_root_transform = Matrix::CreateAffineTransformation(Vector3::One, t, q);
 		if (_transition) {
 			//last_transform = transform;
@@ -25,10 +24,10 @@ namespace Animation
 		else {
 		}
 		position = last_position + t - motion_begin_position;
-		rotaion = q * motion_begin_rotaion.Inversed() * last_rotaion;
+		rotaion = q /** motion_begin_rotaion.Inversed() * last_rotaion*/;
 
 
 		//position = transform.Translation();
-		//rotaion = Quaternion::CreateFromRotationMatrix(transform);
+		//rotaion = Quaternion::CreateFromRotationMatrix(transform); 
 	}
 }
