@@ -24,6 +24,7 @@ void Material::CreateSRB(Graphics::PipelineState* PSO)
 
 	//if (m_SRB == nullptr)
 	{
+		//LOG("111");
 		m_ConstantBuffer = std::make_shared<Graphics::GpuDefaultBuffer>(1, sizeof(PBRMaterialConstants), &m_ConstantsData);
 		m_BaseColorTextureDescriptor = m_BaseColorTexture != nullptr ? m_BaseColorTexture->CreateSRV() : nullptr;
 		m_MetallicRoughnessTextureDescriptor = m_MetallicRoughnessTexture != nullptr ? m_MetallicRoughnessTexture->CreateSRV() : nullptr;

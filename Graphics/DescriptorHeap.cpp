@@ -76,6 +76,9 @@ namespace Graphics
 		auto GPUHandle = m_FirstGPUHandle;
 		GPUHandle.ptr += allocation.unalignedOffset * m_DescriptorIncrementSize;
 
+		char out[50];
+		sprintf(out, "%d", allocation.unalignedOffset);
+		LOG(out);
 		// 分配过的Descriptor最大的数量
 		m_MaxAllocatedNum = std::max(m_MaxAllocatedNum, m_FreeBlockManager.GetUsedSize());
 

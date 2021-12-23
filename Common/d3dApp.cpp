@@ -65,10 +65,6 @@ void D3DApp::Set4xMsaaState(bool value)
 	if (m4xMsaaState != value)
 	{
 		m4xMsaaState = value;
-
-		// Recreate the swapchain and buffers with new multisample settings.
-		/*CreateSwapChain();
-		OnResize();*/
 	}
 }
 

@@ -75,9 +75,9 @@
 #include "Renderer/FrameResource.h"
 
 // imhui
-#include "GUI/imgui.h"
-#include "GUI/imgui_impl_win32.h"
-#include "GUI/imgui_impl_dx12.h"
+#include "Vendor/GUI/imgui.h"
+#include "Vendor/GUI/imgui_impl_win32.h"
+#include "Vendor/GUI/imgui_impl_dx12.h"
 
 //#include "Renderer/ConstantBufferDefinition.h"
 
