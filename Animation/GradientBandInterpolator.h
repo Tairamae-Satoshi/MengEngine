@@ -26,11 +26,11 @@ namespace Animation
 
 		virtual std::vector<float> Interpolate(Vector2 samplePoint, bool isRatio = false)
 		{
-			if (isRatio)
+			/*if (isRatio)
 			{
 				samplePoint.x = (samplePoint.x < 0 ? minVx: maxVx) * abs(samplePoint.x);
 				samplePoint.y = (samplePoint.y < 0 ? minVy : maxVy) * abs(samplePoint.y);
-			}
+			}*/
 			v = samplePoint;
 			const float kDirScale = 2.0f;
 			float total_weight = 0.0f;

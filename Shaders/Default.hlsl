@@ -350,7 +350,11 @@ float4 PS(VertexOut pin) : SV_Target
 	// Fetch the material data.
 	float4	diffuseAlbedo = float4(0.8f, 0.8f, 0.8f, 1.0f);
 #ifdef OPAQUE
-	diffuseAlbedo = BaseColorTex.Sample(gsamLinearWrap, pin.TexC);
+	float total = floor(pin.PosW.x * 0.5f) + floor(pin.PosW.z * 0.5f);
+	diffuseAlbedo = (total % 2.0f) == 0.0f ?
+		float4(0.75f, 0.75f, 0.75f, 1.0f):
+		float4(0.85f, 0.85f, 0.85f, 1.0f);
+	//diffuseAlbedo = BaseColorTex.Sample(gsamLinearWrap, pin.TexC);
 #endif
 	float4 metallic = MetallicFactor;
 	float  roughness = 0.5;

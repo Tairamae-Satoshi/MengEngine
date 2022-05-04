@@ -15,7 +15,8 @@ namespace Animation
 
 		Transform transform_;
 
-		Matrix root = XMMatrixScaling(0.05f, 0.05f, -0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;
+		// TOFIX: Find why the model flips
+		Matrix scale = XMMatrixScaling(0.05f, 0.05f, -0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;
 
 		Skeleton skeleton_;
 
@@ -69,5 +70,6 @@ namespace Animation
 
 		void UpdateRootMotion(bool transition);
 
+		void UpdateController(float dt);
 	};
 }

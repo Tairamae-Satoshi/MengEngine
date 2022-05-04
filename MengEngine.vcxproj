@@ -231,6 +231,8 @@
     <ClInclude Include="Animation\BlendingJob.h" />
     <ClInclude Include="Animation\Character\Character.h" />
     <ClInclude Include="Animation\Character\CharacterController.h" />
+    <ClInclude Include="Animation\Character\MotionMatchingJob.h" />
+    <ClInclude Include="Animation\Common.h" />
     <ClInclude Include="Animation\GradientBandInterpolator.h" />
     <ClInclude Include="Animation\IKAimJob.h" />
     <ClInclude Include="Animation\IKTwoBoneJob.h" />
@@ -242,6 +244,7 @@
     <ClInclude Include="Animation\MotionAnalyzerBackwards.h" />
     <ClInclude Include="Animation\SamplingJob.h" />
     <ClInclude Include="Animation\Skeleton.h" />
+    <ClInclude Include="Animation\Spring.h" />
     <ClInclude Include="Animation\Utils.h" />
     <ClInclude Include="Common\Align.h" />
     <ClInclude Include="Common\Camera.h" />

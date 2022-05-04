@@ -19,6 +19,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "Common/stb_image.h"
 #include "DirectXTex/DirectXTex/DirectXTex.h"
+
 using namespace Animation;
 
 
@@ -190,6 +191,9 @@ private:
 	RenderItem* pHeadAimTargetRitem;
 	Vector3 head_target_offset = Vector3(-1.0f, 7.0f, -3.0f);
 	Vector3 head_target = Vector3(-1.0f, 10.0f, -3.0f);
+
+	// Trajectory Points
+	RenderItem* pTrajectoryPointRitems[4];
 
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
@@ -477,7 +481,7 @@ bool Engine::Initialize()
 		shadowMapVariable->Set(m_ShadowMapSRV);
 
 	// Set Camera
-	mCamera.SetPosition(0.0f, 5.0f, -20.0f);
+	mCamera.SetPosition(0.0f, 25.0f, -50.0f);
 	mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 
 	LoadSkinnedModel();
@@ -514,7 +518,6 @@ void Engine::Update(const GameTimer& gt)
 	UpdateShadowPerPassCB(gt);
 	UpdateMainPassCB(nullptr, gt);
 	UpdateSkinnedCBs(nullptr, gt);
-	mCamera.SetPosition(Vector3(0.0f, 5.0f, -20.0f) + character.transform_.mTrans.mValue);
 	UpdateTarget(gt);
 }
 
@@ -600,20 +603,12 @@ void Engine::Render(const GameTimer& gt)
 	// <------------------------------------GUI Pass---------------------------------------------->
 	UpdateGUI();
 
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.DisplaySize = ImVec2((float)D3DApp::mClientWidth, (float)D3DApp::mClientHeight);
+	/*ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.DisplaySize = ImVec2((float)D3DApp::mClientWidth, (float)D3DApp::mClientHeight);*/
 
 	ImGui::Render();
+	graphicsContext.SetDescriptorHeap(cbvsrvuavHeap, samplerHeap);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), graphicsContext.GetD3DCommandList());
-
-
-	// Update and Render additional Platform Windows
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault(NULL, (void*)graphicsContext.GetD3DCommandList());
-	}
-
 
 	graphicsContext.Finish();
 	m_SwapChain->Present();
@@ -669,16 +664,21 @@ void Engine::OnKeyboardInput(const GameTimer& gt)
 
 
 	// Character Control
-	if (GetAsyncKeyState(VK_UP) & 0x8000)
-		character.character_controller_.Update(Vector3(0.0f, 0.0f, -1.0f), gt.DeltaTime());
-	else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
-		character.character_controller_.Update(Vector3(0.0f, 0.0f, 1.0f), gt.DeltaTime());
-	else if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-		character.character_controller_.Update(Vector3(-1.0f, 0.0f, 0.0f), gt.DeltaTime());
-	else if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
-		character.character_controller_.Update(Vector3(1.0f, 0.0f, 0.0f), gt.DeltaTime());
-	else
-		character.character_controller_.Update(Vector3(0.0f, 0.0f, 0.0f), gt.DeltaTime());
+	//if (GetAsyncKeyState(VK_UP) & 0x8000)
+	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, -1.0f), gt.DeltaTime());
+	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, 1.0f);
+	//else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, 1.0f), gt.DeltaTime());
+	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, -1.0f);
+	//else if (GetAsyncKeyState(VK_LEFT) & 0x8000)
+	//	//character.character_controller_.Update(Vector3(-1.0f, 0.0f, 0.0f), gt.DeltaTime());
+	//	character.character_controller_.gamepadstick_left = Vector3(-1.0f, 0.0f, 0.0f);
+	//else if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
+	//	//character.character_controller_.Update(Vector3(1.0f, 0.0f, 0.0f), gt.DeltaTime());
+	//	character.character_controller_.gamepadstick_left = Vector3(1.0f, 0.0f, 0.0f);
+	//else
+	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, 0.0f), gt.DeltaTime());
+	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, 0.0f);
 
 	// TODO
 	if (GetAsyncKeyState(' ') & 0x8000)
@@ -705,6 +705,7 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 
 	//blender.t = mController.GetTimeRatio();
 	blender.deltaT = mController.GetDeltaTime();
+	character.UpdateController(gt.DeltaTime());
 	character.UpdateBlendingMotion(blender);
 	character.UpdateRootMotion(blender.transition /*|| blender.weight_transition*/);
 	character.UpdateFinalModelTransform();
@@ -713,6 +714,14 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
         std::begin(character.models_),
         std::end(character.models_),
         &mSkinnedConstants.BoneTransforms[0]);
+
+	for (int i = 0; i < mRitemLayer[(int)RenderLayer::SkinnedOpaque].size(); i++) {
+		XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, -0.05f);
+		m *= XMMatrixRotationQuaternion(character.character_controller_.simulation_rotation);
+		m *= XMMatrixTranslationFromVector(character.character_controller_.simulation_position);
+		XMStoreFloat4x4(&mRitemLayer[(int)RenderLayer::SkinnedOpaque][i]->World, m);
+	}
+
 }
 
 void Engine::UpdateShadowTransform(const GameTimer& gt)
@@ -835,86 +844,6 @@ void Engine::UpdateGUI()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	static bool p_open = true;
-	static bool opt_fullscreen = true;
-	static bool opt_padding = false;
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-	// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-	// because it would be confusing to have two docking targets within each others.
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-	if (opt_fullscreen)
-	{
-		const ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(viewport->WorkPos);
-		ImGui::SetNextWindowSize(viewport->WorkSize);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-	}
-	else
-	{
-		dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
-	}
-
-	// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-	// and handle the pass-thru hole, so we ask Begin() to not render a background.
-	if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-		window_flags |= ImGuiWindowFlags_NoBackground;
-
-	// Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-	// This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-	// all active windows docked into it will lose their parent and become undocked.
-	// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-	// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-	if (!opt_padding)
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("DockSpace Demo", &p_open, window_flags);
-	if (!opt_padding)
-		ImGui::PopStyleVar();
-
-	if (opt_fullscreen)
-		ImGui::PopStyleVar(2);
-
-	// Submit the DockSpace
-	ImGuiIO& io = ImGui::GetIO();
-	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-	{
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-	}
-	else
-	{
-		//ShowDockingDisabledMessage();
-	}
-
-	if (ImGui::BeginMenuBar())
-	{
-		if (ImGui::BeginMenu("Options"))
-		{
-			// Disabling fullscreen would allow the window to be moved to the front of other windows,
-			// which we can't undo at the moment without finer window depth/z control.
-			ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
-			ImGui::MenuItem("Padding", NULL, &opt_padding);
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoSplit; }
-			if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-			if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode; }
-			if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-			if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
-				p_open = false;
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMenuBar();
-	}
-
 	if (ImGui::Begin("Panel"))
 	{
 		character.skeleton_.OnGui();
@@ -931,10 +860,47 @@ void Engine::UpdateGUI()
 
 		//ImGui::Image((ImTextureID)m_ShadowMapSRV->GetGpuHandle().ptr, ImVec2(1280, 720));
 
+		ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
+		float radius = 100.0f;
+		ImVec2 canvas_sz = ImVec2(2.0f * radius, 2.0f * radius);   // Resize canvas to what's available
+		ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
+
+		// Draw gamepad UI
+		static ImVec2 scrolling(0.0f, 0.0f);
+		static ImVec2 gamepadEndPoint(0.0f, 0.0f);
+
+		ImGuiIO& io = ImGui::GetIO();
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		const ImVec2 origin((canvas_p0.x + canvas_p1.x) * 0.5f, (canvas_p0.y + canvas_p1.y) * 0.5f); // Lock scrolled origin
+		draw_list->AddCircleFilled(origin, radius, IM_COL32(50, 50, 50, 255));
+		draw_list->AddCircle(origin, radius, IM_COL32(255, 255, 255, 255));
+		//draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
+		//draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
+
+		ImGui::InvisibleButton("canvas", canvas_sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+		const bool is_hovered = ImGui::IsItemHovered(); // Hovered
+		const bool is_active = ImGui::IsItemActive();   // Held
+		//const ImVec2 origin_in_canvas((canvas_p0.x + canvas_p1.x) * 0.5f - origin.x, (canvas_p0.y + canvas_p1.y) * 0.5f - origin.y); // Lock scrolled origin
+		const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
+		const float length = sqrtf(mouse_pos_in_canvas.x * mouse_pos_in_canvas.x + mouse_pos_in_canvas.y * mouse_pos_in_canvas.y);
+		if (is_hovered)
+		{
+			gamepadEndPoint.x = mouse_pos_in_canvas.x / radius;
+			gamepadEndPoint.y = mouse_pos_in_canvas.y / radius;
+		}
+		else
+		{
+			gamepadEndPoint.x = 0.0f;
+			gamepadEndPoint.y = 0.0f;
+		}
+		draw_list->AddLine(ImVec2(origin.x, origin.y), ImVec2(origin.x + 0.8f * radius * gamepadEndPoint.x, origin.y + 0.8f * radius * gamepadEndPoint.y), IM_COL32(255, 255, 0, 255), 2.0f);
+
+		character.character_controller_.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
+
 		ImGui::End();
 	}
 
-	ImGui::End();
+	//ImGui::End();
 }
 
 void Engine::UpdateTarget(const GameTimer& gt)
@@ -944,7 +910,14 @@ void Engine::UpdateTarget(const GameTimer& gt)
 		std::cos(time * 0.25f) * 0.5,
 		std::cos(time * 0.5f + .5f));
 	head_target = head_target_offset + animated_target * 5.0f;
-	XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(head_target.x, head_target.y, head_target.z));
+	XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
+
+	for (int i = 0; i < 4; i++) {
+		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
+			character.character_controller_.trajectory_positions[i].x,
+			0.0f,
+			character.character_controller_.trajectory_positions[i].z));
+	}
 }
 
 
@@ -1136,6 +1109,13 @@ void Engine::LoadSkinnedModel()
 		velocities.push_back(Vector2(velocity.x, velocity.z));
 	}
 	interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
+	character.character_controller_.simulation_run_fwrd_speed = -interpolator->minVy * 0.05f;
+	character.character_controller_.simulation_run_side_speed = interpolator->maxVx * 0.05f;
+	character.character_controller_.simulation_run_back_speed = interpolator->maxVy * 0.05f;
+	
+	char out[50];
+	sprintf(out, "%f, %f, %f", -interpolator->minVy, interpolator->maxVx, interpolator->maxVy);
+	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1068, out);
 
 	// Calculate weight
 	std::vector<float> weights = interpolator->Interpolate(Vector2(0.0, 0.0));
@@ -1265,6 +1245,7 @@ void Engine::BuildRenderItems()
 	targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
 	targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
 
+
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
 	pTargetRitem = targetRitem.get();
 	mAllRitems.push_back(std::move(targetRitem));
@@ -1286,6 +1267,26 @@ void Engine::BuildRenderItems()
 	pHeadAimTargetRitem = head_target_ritem.get();
 	mAllRitems.push_back(std::move(head_target_ritem));
 	
+	// Trajectory
+	for (int i = 0; i < 4; i++) {
+		auto trajectoryPointRitem = std::make_unique<RenderItem>();
+		trajectoryPointRitem->World = MathHelper::Identity4x4();
+		XMStoreFloat4x4(&trajectoryPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+		XMStoreFloat4x4(&trajectoryPointRitem->TexTransform, Matrix::Identity);
+		trajectoryPointRitem->ObjCBIndex = objCBIndex++;
+		trajectoryPointRitem->Mat = mMaterials["tile0"].get();
+		trajectoryPointRitem->Geo = mGeometries["shapeGeo"].get();
+		trajectoryPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		trajectoryPointRitem->IndexCount = trajectoryPointRitem->Geo->DrawArgs["sphere"].IndexCount;
+		trajectoryPointRitem->StartIndexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+		trajectoryPointRitem->BaseVertexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+
+		mRitemLayer[(int)RenderLayer::Opaque].push_back(trajectoryPointRitem.get());
+		pTrajectoryPointRitems[i] = trajectoryPointRitem.get();
+		mAllRitems.push_back(std::move(trajectoryPointRitem));
+
+	}
+
 	if (mGeometries[mSkeletonName]!=NULL)
 	{
 		for (UINT i = 0; i < mGeometries[mSkeletonName]->DrawArgs.size(); ++i)
@@ -1295,7 +1296,7 @@ void Engine::BuildRenderItems()
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, character.root);
+			XMStoreFloat4x4(&ritem->World, character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;
@@ -1323,7 +1324,7 @@ void Engine::BuildGUI()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+	//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -1333,17 +1334,17 @@ void Engine::BuildGUI()
 	//ImGui::StyleColorsClassic();
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-	ImGuiStyle& style = ImGui::GetStyle();
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		style.WindowRounding = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-	}
+	//ImGuiStyle& style = ImGui::GetStyle();
+	//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	//{
+	//	//style.WindowRounding = 0.0f;
+	//	//style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+	//}
 
 
 	// Setup Platform/Renderer backends
 	Graphics::GPUDescriptorHeap& cbvsrvuavHeap = Graphics::RenderDevice::GetSingleton().GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	Graphics::DescriptorHeapAllocation allocation = cbvsrvuavHeap.Allocate(1);
+	Graphics::DescriptorHeapAllocation allocation = cbvsrvuavHeap.Allocate(3);
 	ImGui_ImplWin32_Init(mhMainWnd);
 	ImGui_ImplDX12_Init(m_RenderDevice->GetD3D12Device(), 3,
 		DXGI_FORMAT_R8G8B8A8_UNORM, cbvsrvuavHeap.GetD3D12DescriptorHeap(),

@@ -37,11 +37,11 @@ namespace Animation
 		LocalToModelJob ltm_job;
 		ltm_job.skeleton = &skeleton_;
 		ltm_job.input = locals_;
-		if (!ltm_job.Run(false, true)) {
+		if (!ltm_job.Run(true, true)) {
 			//return false;
 		}
 		models_ = ltm_job.output;
-		transform_.mTrans.mValue = Vector3::Transform(locals_[0].mTrans.mValue, root);
+		transform_.mTrans.mValue = Vector3::Transform(locals_[0].mTrans.mValue, scale);
 	}
 
 	void Character::UpdateFootIK(Vector3 target)
@@ -54,7 +54,7 @@ namespace Animation
 
 		const LegInfo& leg = leg_controller_.legs[0];
 		// Target position and pole vectors must be in model space.
-		Vector3 target_ms = Vector3::Transform(target, root.Invert());
+		Vector3 target_ms = Vector3::Transform(target, scale.Invert());
 		Vector3 pole_vector_ms = models_[leg.knee].Up();//FIXME
 		IKTwoBoneJob ik_job;
 		ik_job.target = target_ms;
@@ -82,7 +82,12 @@ namespace Animation
 
 	void Character::UpdateBlendingMotion(BlendingJob& _blending_job)
 	{
-		Vector2 velocity = Vector2(character_controller_.velocity.x, character_controller_.velocity.z);
+		Vector3 v = quat_inv_mul_vec3(character_controller_.simulation_rotation, character_controller_.simulation_velocity);
+		Vector2 velocity = 20 * Vector2(v.x, -v.z);
+		char out[50];
+		sprintf(out, "velocity: (%f, %f, %f)", velocity.x, 50.0f * v.y, velocity.y);
+		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "CharacterController", "Update", 336, out);
+
 		std::vector<float> weights = _blending_job.interpolator->Interpolate(velocity, true);
 		
 		Vector2 new_target_velocity = Vector2(character_controller_.target_direction.x, character_controller_.target_direction.z);
@@ -115,7 +120,7 @@ namespace Animation
 
 		// Pole vector and target position are constant for the whole algorithm, in model-space
 		ik_job.pole_vector = Vector3::UnitY;
-		ik_job.target = Vector3::Transform(target, root.Invert());
+		ik_job.target = Vector3::Transform(target, scale.Invert());
 
 		// The same quaternion will be used each time the job is run.
 		Quaternion correction;
@@ -185,17 +190,25 @@ namespace Animation
 
 	void Character::UpdateRootMotion(bool transition)
 	{
-		root_motion_.ApplyRootTransform(locals_[0].mRot.mValue, locals_[0].mTrans.mValue, transition/*||transition_*/);
-		locals_[0].mRot.mValue = root_motion_.rotaion;
-		locals_[0].mTrans.mValue.x = root_motion_.position.x;
-		locals_[0].mTrans.mValue.z = root_motion_.position.z;
-		char out[50];
-		sprintf(out, "transition_ = %f", transition_);
-		if (transition_)
-		{
-			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 231, out);
-		}
+		//root_motion_.ApplyRootTransform(locals_[0].mRot.mValue, locals_[0].mTrans.mValue, transition/*||transition_*/);
+		//locals_[0].mRot.mValue = root_motion_.rotaion;
+		//locals_[0].mTrans.mValue.x = root_motion_.position.x;
+		//locals_[0].mTrans.mValue.z = root_motion_.position.z;
+		//locals_[0].mRot.mValue = character_controller_.simulation_rotation;
+		//locals_[0].mTrans.mValue.x = character_controller_.simulation_position.x;
+		//locals_[0].mTrans.mValue.z = character_controller_.simulation_position.z;
+
+		//char out[50];
+		//sprintf(out, "transition_ = %f", transition_);
+		//if (transition_)
+		//{
+		//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 231, out);
+		//}
 		//root = root_motion_.transform;
 
+	}
+
+	void Character::UpdateController(float dt) {
+		character_controller_.Update(dt);
 	}
 }
