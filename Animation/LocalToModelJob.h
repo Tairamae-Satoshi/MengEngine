@@ -1,5 +1,5 @@
 #pragma once
-#include"Skeleton.h"
+#include"AnimationDatabase.h"
 
 namespace Animation
 {
@@ -13,7 +13,7 @@ namespace Animation
 
 		bool Run(bool local = true, bool offset = true);
 
-		const Skeleton* skeleton;
+		const AnimationDatabase* skeleton;
 
 		std::vector<Transform> input;
 

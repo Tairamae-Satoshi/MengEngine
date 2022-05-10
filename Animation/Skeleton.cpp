@@ -1,39 +1,39 @@
 #include "../pch.h"
-#include "Skeleton.h"
+#include "AnimationDatabase.h"
 
 using namespace DirectX;
 
 namespace Animation
 {
-	const AnimationClip* Skeleton::GetAnimationClipByName(const std::string& clipName) const
+	const AnimationClip* AnimationDatabase::GetAnimationClipByName(const std::string& clipName) const
 	{
 		return &(mAnimations.at(clipName));
 	}
 
-	float Skeleton::GetClipStartTime(const std::string& clipName)const
+	float AnimationDatabase::GetClipStartTime(const std::string& clipName)const
 	{
 		auto clip = mAnimations.find(clipName);
 		return clip->second.GetClipStartTime();
 	}
 
-	float Skeleton::GetClipEndTime(const std::string& clipName)const
+	float AnimationDatabase::GetClipEndTime(const std::string& clipName)const
 	{
 		auto clip = mAnimations.find(clipName);
 		return clip->second.GetClipEndTime();
 	}
 
-	UINT Skeleton::GetAnimationNum() const
+	UINT AnimationDatabase::GetAnimationNum() const
 	{
 		return mAnimations.size();
 	}
 
 
-	UINT Skeleton::JointCount()const
+	UINT AnimationDatabase::JointCount()const
 	{
 		return mJointHierarchy.size();
 	}
 	
-	void Skeleton::Set(std::vector<int>& jointHierarchy,
+	void AnimationDatabase::Set(std::vector<int>& jointHierarchy,
 		std::vector<std::string>& jointNames,
 		std::vector<XMFLOAT4X4>& jointOffsets,
 		std::vector<SkinnedVertex> vertices,
@@ -46,12 +46,12 @@ namespace Animation
 		mAnimations = animations;
 	}
 
-	void Skeleton::SetBindPose(const AnimationClip* bindPose)
-	{
-		mBindPose = bindPose;
-	}
+	//void AnimationDatabase::SetBindPose(const AnimationClip* bindPose)
+	//{
+	//	mBindPose = bindPose;
+	//}
 
-	void Skeleton::AddAnimation(std::unordered_map<std::string, AnimationClip>& animations)
+	void AnimationDatabase::AddAnimation(std::unordered_map<std::string, AnimationClip>& animations)
 	{
 		for (auto [name, animation] : animations)
 		{
@@ -59,14 +59,14 @@ namespace Animation
 		}
 	}
 
-	const AnimationClip* Skeleton::AddAnimation(std::string name, AnimationClip animation)
+	const AnimationClip* AnimationDatabase::AddAnimation(std::string name, AnimationClip animation)
 	{
 		mAnimations[name] = animation;
 		return &(mAnimations.at(name));
 	}
 
 
-	std::string Skeleton::GetAnimationClipName(UINT index) const
+	std::string AnimationDatabase::GetAnimationClipName(UINT index) const
 	{
 		std::unordered_map<std::string, AnimationClip>::const_iterator it = mAnimations.begin();
 		for (UINT i = 0; i < mAnimations.size(); i++, it++)
@@ -76,7 +76,7 @@ namespace Animation
 		return "";
 	}
 
-	std::vector<int> Skeleton::GetJointChildrenIndex(int index) const
+	std::vector<int> AnimationDatabase::GetJointChildrenIndex(int index) const
 	{
 		std::vector<int> childrenIndex;
 
@@ -89,33 +89,33 @@ namespace Animation
 		return childrenIndex;
 	}
 
-	int Skeleton::GetJointParentIndex(int i) const
+	int AnimationDatabase::GetJointParentIndex(int i) const
 	{
 		return mJointHierarchy[i];
 	}
 
-	std::string Skeleton::GetJointName(int index) const
+	std::string AnimationDatabase::GetJointName(int index) const
 	{
 		return mJointNames[index];
 	}
 
-	Matrix Skeleton::GetJointOffset(int index) const
+	Matrix AnimationDatabase::GetJointOffset(int index) const
 	{
 		return mJointOffsets[index];
 	}
 
-	const AnimationClip* Skeleton::GetBindPose() const
+	const AnimationClip* AnimationDatabase::GetBindPose() const
 	{
 		return mBindPose;
 	}
 
-	const std::vector<SkinnedVertex>& Skeleton::GetVertices() const
+	const std::vector<SkinnedVertex>& AnimationDatabase::GetVertices() const
 	{
 		return mVertices;
 	}
 
 
-	void TraverseSkeletonHierachy(const Animation::Skeleton& skeleton, int jointIndex)
+	void TraverseSkeletonHierachy(const Animation::AnimationDatabase& skeleton, int jointIndex)
 	{
 		std::string jointName = skeleton.GetJointName(jointIndex);
 		if (ImGui::TreeNode(jointName.data()))
@@ -129,7 +129,7 @@ namespace Animation
 		}
 	}
 
-	void ShowSkeletonHierachy(const Animation::Skeleton& skeleton, int jointIndex)
+	void ShowSkeletonHierachy(const Animation::AnimationDatabase& skeleton, int jointIndex)
 	{
 		if (ImGui::TreeNode("Skeleton Hierachy"))
 		{
@@ -138,7 +138,7 @@ namespace Animation
 		}
 	}
 
-	bool Skeleton::OnGui()
+	bool AnimationDatabase::OnGui()
 	{
 		ShowSkeletonHierachy(*this, 0);
 

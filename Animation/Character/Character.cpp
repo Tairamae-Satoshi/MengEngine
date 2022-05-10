@@ -3,20 +3,23 @@
 namespace Animation
 {
 	Character::Character() :
-		target_velocity_(Vector2::Zero),
-		transition_(false)
+		target_velocity(Vector2::Zero),
+		transition(false)
 	{}
 
 	bool Character::Initialize()
 	{
+		// Initialize the character controller
+		character_controller.Initialize(&db);
+
 		// Initialize the leg controller
-		leg_controller_.skeleton = &skeleton_;
-		leg_controller_.Initialize();
+		leg_controller.skeleton = &db;
+		leg_controller.Initialize();
 
 		// Look for each joint in the head chain.
 		int found = 0;
-		for (int i = 0; i < skeleton_.JointCount() && found != 4; i++) {
-			std::string joint_name = skeleton_.GetJointName(i);
+		for (int i = 0; i < db.JointCount() && found != 4; i++) {
+			std::string joint_name = db.GetJointName(i);
 
 			if (joint_name.find(k_joint_names_head[found]) != joint_name.npos) {
 				joints_chain_[found] = i;
@@ -25,78 +28,71 @@ namespace Animation
 			}
 		}
 
-		// Initialize the root motion
-		root_motion_.transform = XMMatrixRotationY(0.0f);
-		root_motion_.last_transform = XMMatrixRotationY(0.0f);
-
 		return true;
 	}
 
 	void Character::UpdateFinalModelTransform()
 	{
 		LocalToModelJob ltm_job;
-		ltm_job.skeleton = &skeleton_;
-		ltm_job.input = locals_;
+		ltm_job.skeleton = &db;
+		ltm_job.input = locals;
 		if (!ltm_job.Run(true, true)) {
 			//return false;
 		}
-		models_ = ltm_job.output;
-		transform_.mTrans.mValue = Vector3::Transform(locals_[0].mTrans.mValue, scale);
+		models = ltm_job.output;
+		//transform.mTrans.mValue = Vector3::Transform(locals[0].mTrans.mValue, scale);
 	}
 
 	void Character::UpdateFootIK(Vector3 target)
 	{
 		LocalToModelJob ltm_job;
-		ltm_job.skeleton = &skeleton_;
-		ltm_job.input = locals_;
+		ltm_job.skeleton = &db;
+		ltm_job.input = locals;
 		ltm_job.Run(true, false);
-		models_ = ltm_job.output;
+		models = ltm_job.output;
 
-		const LegInfo& leg = leg_controller_.legs[0];
+		const LegInfo& leg = leg_controller.legs[0];
 		// Target position and pole vectors must be in model space.
 		Vector3 target_ms = Vector3::Transform(target, scale.Invert());
-		Vector3 pole_vector_ms = models_[leg.knee].Up();//FIXME
+		Vector3 pole_vector_ms = models[leg.knee].Up();//FIXME
 		IKTwoBoneJob ik_job;
 		ik_job.target = target_ms;
 		ik_job.pole_vector = pole_vector_ms;
 		// Mid axis (knee) is constant (usualy), and arbitratry defined by
 		// skeleton/rig setup.
 		//ik_job.mid_axis = Vector3::UnitX;
-		ik_job.weight = foot_ik_weight_;
-		ik_job.soften = foot_ik_soften_;
+		ik_job.weight = foot_ik_weight;
+		ik_job.soften = foot_ik_soften;
 		ik_job.twist_angle = 0.0f;
-		ik_job.mid_initial_rot = locals_[leg.knee].mRot.mValue;
-		ik_job.start_joint = models_[leg.hip];
-		ik_job.mid_joint = models_[leg.knee];
-		ik_job.end_joint = models_[leg.ankle];
+		ik_job.mid_initial_rot = locals[leg.knee].mRot.mValue;
+		ik_job.start_joint = models[leg.hip];
+		ik_job.mid_joint = models[leg.knee];
+		ik_job.end_joint = models[leg.ankle];
 		ik_job.Run();
 
 		// Apply IK quaternions to their respective local-space transforms.
 		// Model-space transformations needs to be updated after a call to this
 		// function.
 		// Note the order of multiplication 
-		locals_[leg.hip].mRot.mValue = ik_job.start_joint_correction * locals_[leg.hip].mRot.mValue;
-		locals_[leg.knee].mRot.mValue = ik_job.mid_joint_correction * locals_[leg.knee].mRot.mValue;
+		locals[leg.hip].mRot.mValue = ik_job.start_joint_correction * locals[leg.hip].mRot.mValue;
+		locals[leg.knee].mRot.mValue = ik_job.mid_joint_correction * locals[leg.knee].mRot.mValue;
 
 	}
 
 	void Character::UpdateBlendingMotion(BlendingJob& _blending_job)
 	{
-		Vector3 v = quat_inv_mul_vec3(character_controller_.simulation_rotation, character_controller_.simulation_velocity);
-		Vector2 velocity = 20 * Vector2(v.x, -v.z);
-		char out[50];
-		sprintf(out, "velocity: (%f, %f, %f)", velocity.x, 50.0f * v.y, velocity.y);
-		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "CharacterController", "Update", 336, out);
+		Vector3 v = quat_inv_mul_vec3(character_controller.simulation_rotation, character_controller.simulation_velocity);
+		Vector2 velocity = Vector2(v.x, -v.z); // TODO
 
 		std::vector<float> weights = _blending_job.interpolator->Interpolate(velocity, true);
 		
-		Vector2 new_target_velocity = Vector2(character_controller_.target_direction.x, character_controller_.target_direction.z);
-		if (new_target_velocity !=target_velocity_){
-			transition_ = true;
-			target_velocity_ = new_target_velocity;
+		Vector2 new_target_velocity = Vector2(character_controller.target_direction.x, character_controller.target_direction.z);
+		if (new_target_velocity !=target_velocity){
+			transition = true;
+			target_velocity = new_target_velocity;
 		}
 		else{
-			transition_ = false;
+			transition = false;
 		}
 
 		for (int i = 0; i < _blending_job.layers.size(); ++i)
@@ -105,16 +101,16 @@ namespace Animation
 		}
 
 		_blending_job.Run();
-		locals_ = _blending_job.output;
+		locals = _blending_job.output;
 	}
 
 	void Character::UpdateHeadAimAtIK(Vector3 target)
 	{
 		LocalToModelJob ltm_job;
-		ltm_job.skeleton = &skeleton_;
-		ltm_job.input = locals_;
+		ltm_job.skeleton = &db;
+		ltm_job.input = locals;
 		ltm_job.Run(true, false);
-		models_ = ltm_job.output;
+		models = ltm_job.output;
 
 		IKAimJob ik_job;
 
@@ -147,7 +143,7 @@ namespace Animation
 		for (int i = 0, joint = joints_chain_[0]; i < chain_length_;
 			++i, previous_joint = joint, joint = joints_chain_[i]) {
 			// Setups the model-space matrix of the joint being processed by IK
-			ik_job.joint = &models_[joint];
+			ik_job.joint = &models[joint];
 			// Setup joint local_space up vector.
 			ik_job.up = Vector3::UnitY;
 
@@ -168,13 +164,13 @@ namespace Animation
 				// bringing them to model-space (_ms).
 				Vector3 corrected_forward_ms = Vector3::TransformVector(Vector3::Transform(ik_job.forward,
 					correction),
-					models_[previous_joint]);
+					models[previous_joint]);
 				Vector3 corrected_offset_ms = Vector3::Transform(Vector3::Transform(ik_job.offset,
 					correction),
-					models_[previous_joint]);
+					models[previous_joint]);
 
 				// Brings "forward" and "offset" to joint local-space
-				Matrix inv_joint = models_[joint].Invert();
+				Matrix inv_joint = models[joint].Invert();
 				ik_job.forward = Vector3::TransformVector(corrected_forward_ms, inv_joint).Normalized();
 				ik_job.offset = Vector3::Transform(corrected_offset_ms, inv_joint);
 			}
@@ -184,31 +180,12 @@ namespace Animation
 				//return false;
 			}
 			// Apply IK quaternion to its respective local-space transforms.
-			locals_[joint].mRot.mValue = *ik_job.joint_correction * locals_[joint].mRot.mValue;
+			locals[joint].mRot.mValue = *ik_job.joint_correction * locals[joint].mRot.mValue;
 		}
 	}
 
-	void Character::UpdateRootMotion(bool transition)
-	{
-		//root_motion_.ApplyRootTransform(locals_[0].mRot.mValue, locals_[0].mTrans.mValue, transition/*||transition_*/);
-		//locals_[0].mRot.mValue = root_motion_.rotaion;
-		//locals_[0].mTrans.mValue.x = root_motion_.position.x;
-		//locals_[0].mTrans.mValue.z = root_motion_.position.z;
-		//locals_[0].mRot.mValue = character_controller_.simulation_rotation;
-		//locals_[0].mTrans.mValue.x = character_controller_.simulation_position.x;
-		//locals_[0].mTrans.mValue.z = character_controller_.simulation_position.z;
-
-		//char out[50];
-		//sprintf(out, "transition_ = %f", transition_);
-		//if (transition_)
-		//{
-		//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 231, out);
-		//}
-		//root = root_motion_.transform;
-
-	}
-
 	void Character::UpdateController(float dt) {
-		character_controller_.Update(dt);
+		character_controller.Update(dt);
+		locals = character_controller.curr_bone_transforms;
 	}
 }

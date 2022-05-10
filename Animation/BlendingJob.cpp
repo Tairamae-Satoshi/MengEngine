@@ -72,7 +72,7 @@ namespace Animation
 
 			SamplingJob samplingJob;
 			samplingJob.animation = layer.animation;
-			samplingJob.ratio = layer.T / layer.animation->GetDuration();
+			samplingJob.ratio = layer.T / layer.animation->get_duration_in_second();
 			samplingJob.Run();
 
 			const std::vector<Transform>& transforms = samplingJob.output;
@@ -203,7 +203,7 @@ namespace Animation
 		float duration = 0.0f;
 		for (const auto& layer : layers)
 		{
-			duration += layer.animation->GetDuration() * layer.weight;
+			duration += layer.animation->get_duration_in_second() * layer.weight;
 		}
 		return duration;
 	}

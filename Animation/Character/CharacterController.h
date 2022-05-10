@@ -2,6 +2,7 @@
 
 #include "../pch.h"
 #include "..//Spring.h"
+#include "..//MotionMatchingJob.h"
 
 using namespace DirectX::SimpleMath;
 
@@ -20,14 +21,7 @@ namespace Animation
 
 		Vector3 target_direction = Vector3::Zero;
 
-		void Update(const Vector3& _direction, float _t);
-
-	//private:
-		void UpdateFacingDirection(const Vector3& direction, float t);
-
-		void UpdateVelocity(const Vector3& direction, float t);
-
-		void UpdateSpringCharacter(float& x, float& v, float& a, float v_goal, float halflife, float dt);
+		void Initialize(AnimationDatabase* db);
 
 		Vector3 UpdateDesiredVelocity(
 			const Vector3& gamepadstick_left,
@@ -132,7 +126,7 @@ namespace Animation
 			{
 				desired_velocities[i] = UpdateDesiredVelocity(
 					gamepadstick_left,
-					0, // TODO
+					camera_azimuth, 
 					trajectory_rotations[i],
 					fwrd_speed,
 					side_speed,
@@ -189,7 +183,7 @@ namespace Animation
 					desired_rotations[i - 1],
 					gamepadstick_left,
 					gamepadstick_right,
-					0,//TODO
+					camera_azimuth,
 					desired_strafe,
 					desired_velocities[i]);
 			}
@@ -218,7 +212,7 @@ namespace Animation
 			}
 		}
 
-		void Update(float t)
+		void Update(float dT)
 		{
 			float camera_azimuth = 0.0f;
 
@@ -252,7 +246,25 @@ namespace Animation
 			desired_velocity_change_curr = (desired_velocity_curr - desired_velocity) / dt;
 			desired_velocity = desired_velocity_curr;
 
+			desired_rotation_change_prev = desired_rotation_change_curr;
+			desired_rotation_change_curr = quat_to_scaled_angle_axis(quat_abs((desired_rotation_curr* desired_rotation.Inversed()))) / dt;
 			desired_rotation = desired_rotation_curr;
+
+			bool force_search = false;
+
+			if (force_search_timer <= 0.0f && (
+				(desired_velocity_change_prev.Length() >= desired_velocity_change_threshold &&
+					desired_velocity_change_curr.Length() < desired_velocity_change_threshold)
+				|| (desired_rotation_change_prev.Length() >= desired_rotation_change_threshold &&
+					desired_rotation_change_curr.Length() < desired_rotation_change_threshold)))
+			{
+				force_search = true;
+				force_search_timer = search_time;
+			}
+			else if (force_search_timer > 0)
+			{
+				force_search_timer -= dT;
+			}
 
 			// Predict Future Trajectory
 			PredictTrajectoryDesiredRotations(
@@ -298,6 +310,83 @@ namespace Animation
 				simulation_velocity_halflife,
 				20.0f * dt);
 
+			// Make query vector for search.
+			// In theory this only needs to be done when a search is 
+			// actually required however for visualization purposes it
+			// can be nice to do it every frame
+			std::vector<float> query;
+			query.resize(mm.featureArray.totalDimCount);
+
+			// Compute the features of the query vector
+			//std::vector<float> query_features = mm.matcherData;
+			int offset = 0;
+			RuntimeCharacterData rt_data;
+			rt_data.root_position = trajectory_positions[0];
+			rt_data.root_rotation = trajectory_rotations[0];
+			rt_data.trajectory_positions = trajectory_positions;
+			rt_data.trajectory_rotations = trajectory_rotations;
+
+
+			for (int i = 0; i < mm.featureArray.features.size(); i++) {
+				mm.featureArray.features[i]->EvaluateForRuntimeGuy(&query[mm.featureArray.offsets[i]], rt_data);
+			}
+			//char out[50];
+			//sprintf(out, "curr: ");
+			//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+			//for (size_t i = 0; i < mm.featureArray.totalDimCount; i++)
+			//{
+			//	sprintf(out, "%f ", query[i]);
+			//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
+			//}
+			//sprintf(out, "\n");
+			//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
+			// Check if we reached the end of the current anim
+			bool end_of_anim = db->ClampDatabaseTrajectoryIndex(frame_index, 1) == frame_index;
+
+			// Do we need to search
+			if (force_search ||/* search_timer <= 0.0f ||*/ end_of_anim)
+			{
+				// Search
+
+				mm.bestIndex = end_of_anim ? -1 : frame_index;
+				mm.bestCost = FLT_MAX;
+
+				mm.Run(query);
+
+				// Transition if better frame found
+				if (mm.bestIndex != frame_index)
+				{
+
+					frame_index = mm.bestIndex;
+				}
+
+				// Reset search timer
+				search_timer = search_time;
+
+				//sprintf(out, "best: " );
+				//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+				//for (size_t i = 0; i < mm.featureArray.totalDimCount; i++)
+				//{
+				//	sprintf(out, "%f ", mm.matcherData.get(frame_index, i));
+				//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
+				//}
+				//sprintf(out, "\n");
+				//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
+			}
+
+			// Tick down search timer
+			search_timer -= dt;
+
+			// Tick frame 
+			frame_index++;
+			frame_index = clamp(frame_index, 0, db->totalPoseCount - 1);
+			// Look-up Next Pose
+			curr_bone_transforms = db->GetTransformsAtPoseId(frame_index);
+
 			// Update Simulation
 			Vector3 simulation_position_prev = simulation_position;
 
@@ -316,8 +405,19 @@ namespace Animation
 				simulation_rotation_halflife,
 				dt);
 		}
+		// 
+		MotionMatchingJob mm;
+		AnimationDatabase* db;
+
+		// Pose Data
+		int frame_index;
+
+		std::vector<Transform> curr_bone_transforms;
 
 		// Trajectory & Gameplay Data
+		float search_time = 0.1f;
+		float search_timer = search_time;
+		float force_search_timer = search_time;
 
 		Vector3 desired_velocity;
 		Vector3 desired_velocity_change_curr;

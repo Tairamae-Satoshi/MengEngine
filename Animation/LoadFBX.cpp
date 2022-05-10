@@ -14,8 +14,9 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
-		aiProcess_MakeLeftHanded |
-		aiProcess_FlipUVs);
+		aiProcess_ConvertToLeftHanded
+		/*aiProcess_MakeLeftHanded |
+		aiProcess_FlipUVs*/);
 
 	// If the import failed, report it
 	if (!pScene) {
@@ -111,15 +112,16 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 	std::vector<USHORT>& indices,
 	std::vector<Subset>& subsets,
 	std::vector<FbxMaterial>& mats,
-	Skeleton& skeleton)
+	AnimationDatabase& db)
 {
 	Assimp::Importer importer;
 
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
-		aiProcess_MakeLeftHanded |
-		aiProcess_FlipUVs );
+		aiProcess_ConvertToLeftHanded
+		/*aiProcess_MakeLeftHanded | 
+		aiProcess_FlipUVs*/);
 
 	// If the import failed, report it
 	if (!pScene) {
@@ -127,11 +129,12 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 		return false;
 	}
 
+	animations.clear();
 	CreateSkeletonHierachy(pScene);
 	InitFromScene(pScene, filename, subsets, vertices, indices, mats);
 	jointOffsets = ReorganizeBoneOffsets(pScene);
 	ReadAnimationClips(filename, pScene);
-	skeleton.Set(jointIndexToParentIndex, nodeIndexToName,jointOffsets, vertices, animations);
+	db.Set(jointIndexToParentIndex, nodeIndexToName,jointOffsets, vertices, animations);
 	
 	return true;
 }
@@ -144,15 +147,16 @@ std::string GetFileName(const std::string& path)
 	return filename;
 }
 
-bool FBXLoader::LoadFBXClip(const std::string& filename, Skeleton& skeleton)
+bool FBXLoader::LoadFBXClip(const std::string& filename, AnimationDatabase& db)
 {
 	Assimp::Importer importer;
 
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
-		aiProcess_MakeLeftHanded |
-		aiProcess_FlipUVs);
+		aiProcess_ConvertToLeftHanded
+		/*aiProcess_MakeLeftHanded | 
+		aiProcess_FlipUVs*/);
 
 	// If the import failed, report it
 	if (!pScene) {
@@ -160,8 +164,9 @@ bool FBXLoader::LoadFBXClip(const std::string& filename, Skeleton& skeleton)
 		return false;
 	}
 
+	animations.clear();
 	ReadAnimationClips(filename,pScene);
-	skeleton.AddAnimation(animations);
+	db.AddAnimation(animations);
 }
 
 bool FBXLoader::InitFromScene(const aiScene* pScene,
@@ -306,15 +311,16 @@ std::vector<XMFLOAT4X4> FBXLoader::ReorganizeBoneOffsets(const aiScene* pScene)
 
 void FBXLoader::ReadAnimationClips(const std::string& path, const aiScene* pScene)
 {
-	animations.clear();
+	char out[100];
+
 	aiAnimation** aiAnimationClips = pScene->mAnimations;
 	for (UINT i = 0; i < pScene->mNumAnimations; i++)
 	{
 		aiAnimation* aiAnimationClip = aiAnimationClips[i];
 		AnimationClip animationClip;
 		animationClip.mTicksPerSecond = aiAnimationClips[i]->mTicksPerSecond;
-		animationClip.mSamples.resize(aiAnimationClip->mNumChannels);
-		
+		animationClip.mSamples.resize(nodeIndexToName.size());
+
 		for (UINT j = 0; j < aiAnimationClip->mNumChannels; j++)
 		{
 			aiNodeAnim* pNodeAnim = aiAnimationClip->mChannels[j];
@@ -330,7 +336,6 @@ void FBXLoader::ReadAnimationClips(const std::string& path, const aiScene* pScen
 		std::string fileName = GetFileName(path);
 		std::string clipName = aiAnimationClips[i]->mName.data;
 		animationClip.mName = fileName;
-		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "", "", 333, fileName);
 		animations[fileName + "/" + clipName] = animationClip;
 	}
 }
@@ -348,6 +353,7 @@ void FBXLoader::ReadBoneKeyframes(aiNodeAnim* nodeAnim, BoneAnimationSample& bon
 		Vector3 translation;
 		translation = Vector3(translationKey.mValue.x, translationKey.mValue.y, translationKey.mValue.z);
 		boneAnimation.mLocalPose[i].mTrans.mValue = translation;
+		boneAnimation.mLocalPose[i].mTrans.mTimeTick = translationKey.mTime;
 
 		const aiQuatKey& rotationKey = nodeAnim->mRotationKeys[i];
 		Quaternion rotation;
@@ -355,11 +361,13 @@ void FBXLoader::ReadBoneKeyframes(aiNodeAnim* nodeAnim, BoneAnimationSample& bon
 			Quaternion(rotationKey.mValue.x, rotationKey.mValue.y, rotationKey.mValue.z, rotationKey.mValue.w):
 			-Quaternion(rotationKey.mValue.x, rotationKey.mValue.y, rotationKey.mValue.z, rotationKey.mValue.w);
 		boneAnimation.mLocalPose[i].mRot.mValue = rotation;
+		boneAnimation.mLocalPose[i].mRot.mTimeTick = rotationKey.mTime;
 
 		aiVectorKey scalingKey = nodeAnim->mScalingKeys[i];
 		Vector3 scaling;
 		scaling = Vector3(scalingKey.mValue.x, scalingKey.mValue.y, scalingKey.mValue.z);
 		boneAnimation.mLocalPose[i].mScale.mValue = scaling;
+		boneAnimation.mLocalPose[i].mScale.mTimeTick = scalingKey.mTime;
 	}
 }
 

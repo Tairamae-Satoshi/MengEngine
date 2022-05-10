@@ -166,18 +166,34 @@ private:
 	enum { Animation_Num = 9 };
 
 	const std::string mSkeletonName = "mixamo";
+
+	const std::string bind_pose_filename = "Contents/Models/bind.fbx";
+
 	const std::string mAnimationFilename[Animation_Num] =
-	{ 
+	{
 		"Contents/Models/Standard Idle.fbx",
 		"Contents/Models/Standard Walk.fbx",
 		"Contents/Models/Standard Run.fbx",
+		"Contents/Models/Locomotion/Walking Backwards.fbx",
+		"Contents/Models/Locomotion/Running Backward.fbx",
 		"Contents/Models/Locomotion/left strafe walking.fbx",
 		"Contents/Models/Locomotion/right strafe walking.fbx",
 		"Contents/Models/Locomotion/left strafe.fbx",
-		"Contents/Models/Locomotion/right strafe.fbx",
-		"Contents/Models/Locomotion/Walking Backwards.fbx",
-		"Contents/Models/Locomotion/Running Backward.fbx"
+		"Contents/Models/Locomotion/right strafe.fbx"
 	};
+
+	//const std::string bind_pose_filename = "Contents/Models/Standard Idle.fbx";
+
+	//const std::string mAnimationFilename[Animation_Num] =
+	//{
+	//	"Contents/Models/Female Basic Locomotion Pack/idle.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/walking.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/running.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/left strafe walk.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/right strafe walk.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/left strafe.fbx",
+	//	"Contents/Models/Female Basic Locomotion Pack/right strafe.fbx",
+	//};
 
 	MotionAnalyzer analyzer[Animation_Num];
 	PlaybackController mController;
@@ -197,7 +213,7 @@ private:
 
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
-	const AnimationClip* mSamplers[Animation_Num] = { nullptr, nullptr, nullptr, nullptr, nullptr };
+	const AnimationClip* mSamplers[Animation_Num] = { nullptr };
 	std::vector<FBXLoader::Subset> mSkinnedSubsets;
     std::vector<FBXLoader::FbxMaterial> mSkinnedMats;
     std::vector<std::string> mSkinnedTextureNames;
@@ -706,19 +722,19 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 	//blender.t = mController.GetTimeRatio();
 	blender.deltaT = mController.GetDeltaTime();
 	character.UpdateController(gt.DeltaTime());
-	character.UpdateBlendingMotion(blender);
-	character.UpdateRootMotion(blender.transition /*|| blender.weight_transition*/);
+	//character.UpdateBlendingMotion(blender);
 	character.UpdateFinalModelTransform();
 
     std::copy(
-        std::begin(character.models_),
-        std::end(character.models_),
+        std::begin(character.models),
+        std::end(character.models),
         &mSkinnedConstants.BoneTransforms[0]);
 
 	for (int i = 0; i < mRitemLayer[(int)RenderLayer::SkinnedOpaque].size(); i++) {
-		XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, -0.05f);
-		m *= XMMatrixRotationQuaternion(character.character_controller_.simulation_rotation);
-		m *= XMMatrixTranslationFromVector(character.character_controller_.simulation_position);
+		XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, 0.05f);
+		m *= XMMatrixRotationAxis(Vector3(0, 1, 0), MathHelper::Pi);// TODO
+		m *= XMMatrixRotationQuaternion(character.character_controller.simulation_rotation);
+		m *= XMMatrixTranslationFromVector(character.character_controller.simulation_position * 0.05f);
 		XMStoreFloat4x4(&mRitemLayer[(int)RenderLayer::SkinnedOpaque][i]->World, m);
 	}
 
@@ -846,7 +862,7 @@ void Engine::UpdateGUI()
 
 	if (ImGui::Begin("Panel"))
 	{
-		character.skeleton_.OnGui();
+		character.db.OnGui();
 		mController.OnGui();
 		//blender.OnGui();
 		float t[3] = { target.x, target.y, target.z };
@@ -855,8 +871,8 @@ void Engine::UpdateGUI()
 			target = Vector3(t);
 			XMStoreFloat4x4(&pTargetRitem->World, XMMatrixTranslation(target.x, target.y, target.z));
 		}
-		ImGui::SliderFloat("Weight", &character.foot_ik_weight_, 0.0f, 1.0f);
-		ImGui::SliderFloat("Soften", &character.foot_ik_soften_, 0.0f, 1.0f);
+		ImGui::SliderFloat("Weight", &character.foot_ik_weight, 0.0f, 1.0f);
+		ImGui::SliderFloat("Soften", &character.foot_ik_soften, 0.0f, 1.0f);
 
 		//ImGui::Image((ImTextureID)m_ShadowMapSRV->GetGpuHandle().ptr, ImVec2(1280, 720));
 
@@ -895,7 +911,7 @@ void Engine::UpdateGUI()
 		}
 		draw_list->AddLine(ImVec2(origin.x, origin.y), ImVec2(origin.x + 0.8f * radius * gamepadEndPoint.x, origin.y + 0.8f * radius * gamepadEndPoint.y), IM_COL32(255, 255, 0, 255), 2.0f);
 
-		character.character_controller_.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
+		character.character_controller.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
 
 		ImGui::End();
 	}
@@ -914,9 +930,9 @@ void Engine::UpdateTarget(const GameTimer& gt)
 
 	for (int i = 0; i < 4; i++) {
 		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
-			character.character_controller_.trajectory_positions[i].x,
+			character.character_controller.trajectory_positions[i].x * 0.05f,
 			0.0f,
-			character.character_controller_.trajectory_positions[i].z));
+			character.character_controller.trajectory_positions[i].z * 0.05f));
 	}
 }
 
@@ -1076,26 +1092,30 @@ void Engine::LoadSkinnedModel()
 	std::vector<std::uint16_t> indices;	
 	int animation_num = Animation_Num;
 
-	FBXLoader fbxLoader;
-	fbxLoader.LoadFBX(mAnimationFilename[0], vertices, indices,
-		mSkinnedSubsets, mSkinnedMats, character.skeleton_);
 
-	for (int i = 1; i < animation_num; ++i) {
-		fbxLoader.LoadFBXClip(mAnimationFilename[i], character.skeleton_);
+	FBXLoader fbxLoader;
+	fbxLoader.LoadFBX(bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, character.db);
+	
+	for (int i = 0; i < animation_num; ++i) {
+		fbxLoader.LoadFBXClip(mAnimationFilename[i], character.db);
 	}
 
-	std::string clipName = character.skeleton_.GetAnimationClipName(0);
-	character.skeleton_.SetBindPose(character.skeleton_.GetAnimationClipByName(clipName));
-
-	character.Initialize();
+	character.db.convert_to_fps(60.0f);
 
 	for (int i = 0; i < animation_num; ++i)
 	{
-		clipName = character.skeleton_.GetAnimationClipName(i);
-		mSamplers[i] = character.skeleton_.GetAnimationClipByName(clipName);
+		std::string clipName = character.db.GetAnimationClipName(i);
+		mSamplers[i] = character.db.GetAnimationClipByName(clipName);
 		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 794, clipName);
+	}
 
-		analyzer[i].legC = &character.leg_controller_;
+	character.Initialize();
+
+	// Initialize analyzer
+	for (int i = 0; i < animation_num; ++i)
+	{
+		analyzer[i].legC = &character.leg_controller;
 		analyzer[i].animation = mSamplers[i];
 		analyzer[i].Analyze();
 	}
@@ -1109,13 +1129,12 @@ void Engine::LoadSkinnedModel()
 		velocities.push_back(Vector2(velocity.x, velocity.z));
 	}
 	interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
-	character.character_controller_.simulation_run_fwrd_speed = -interpolator->minVy * 0.05f;
-	character.character_controller_.simulation_run_side_speed = interpolator->maxVx * 0.05f;
-	character.character_controller_.simulation_run_back_speed = interpolator->maxVy * 0.05f;
-	
-	char out[50];
-	sprintf(out, "%f, %f, %f", -interpolator->minVy, interpolator->maxVx, interpolator->maxVy);
-	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1068, out);
+	character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy;
+	character.character_controller.simulation_run_side_speed = interpolator->maxVx;
+	character.character_controller.simulation_run_back_speed = interpolator->maxVy;
+	//character.character_controller_.simulation_run_fwrd_speed = 4.0f;
+	//character.character_controller_.simulation_run_side_speed = 3.0f;
+	//character.character_controller_.simulation_run_back_speed = 2.5f;
 
 	// Calculate weight
 	std::vector<float> weights = interpolator->Interpolate(Vector2(0.0, 0.0));
@@ -1130,10 +1149,10 @@ void Engine::LoadSkinnedModel()
 		layer.t = 0.0f;
 		layer.animation = analyzer[i].animation;
 		layer.Nk = 4;
-		layer.K[0] = 0.0f * analyzer[i].animation->GetDuration();
-		layer.K[1] = analyzer[i].cycles[0].postliftTime * analyzer[i].animation->GetDuration();
-		layer.K[2] = analyzer[i].cycles[1].postliftTime * analyzer[i].animation->GetDuration();
-		layer.K[3] = 1.0f * analyzer[i].animation->GetDuration();
+		layer.K[0] = 0.0f * analyzer[i].animation->get_duration_in_second();
+		layer.K[1] = analyzer[i].cycles[0].postliftTime * analyzer[i].animation->get_duration_in_second();
+		layer.K[2] = analyzer[i].cycles[1].postliftTime * analyzer[i].animation->get_duration_in_second();
+		layer.K[3] = 1.0f * analyzer[i].animation->get_duration_in_second();
 		qsort(layer.K,
 			layer.Nk,
 			sizeof(float),

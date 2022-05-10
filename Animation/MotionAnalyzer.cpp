@@ -38,6 +38,10 @@ namespace Animation
 				ltmJob.input = samplingJob.output;
 				ltmJob.Run(true, false);
 
+				//char out[100];
+				//sprintf(out, "%d: %f, %f, %f",i, ltmJob.input[0].mTrans.mValue.x, ltmJob.input[0].mTrans.mValue.y, ltmJob.input[0].mTrans.mValue.z);
+				//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
 				LegCycleSample sample;
 				sample.knee = Vector3::Transform(Vector3::Zero, ltmJob.output[knee]);
 				sample.heel = Vector3::Transform(legC->legs[leg].ankleHeelVector, ltmJob.output[ankle]);
@@ -197,7 +201,7 @@ namespace Animation
 		if (std::abs(mCycleDirection.x) >= 0.99) mCycleDirection = Vector3(mCycleDirection.x / std::abs(mCycleDirection.x), 0.0f, 0.0f);
 		if (std::abs(mCycleDirection.z) >= 0.99) mCycleDirection = Vector3(0.0f, 0.0f, mCycleDirection.z / std::abs(mCycleDirection.z));
 
-		mCycleDuration = animation->GetDuration();
+		mCycleDuration = animation->get_pose_count() / animation->get_tick_per_second();
 		mCycleSpeed = mCycleDistance / mCycleDuration;
 		sprintf(out, "Cycle direction: (%f, %f, %f) with step distance %f and speed %f", mCycleDirection.x, mCycleDirection.y, mCycleDirection.z, mCycleDistance, mCycleSpeed);
 		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);

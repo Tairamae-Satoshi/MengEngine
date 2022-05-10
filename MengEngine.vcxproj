@@ -164,7 +164,7 @@
     <ClCompile Include="Animation\MotionAnalyzer.cpp" />
     <ClCompile Include="Animation\Character\RootMotion.cpp" />
     <ClCompile Include="Animation\SamplingJob.cpp" />
-    <ClCompile Include="Animation\Skeleton.cpp" />
+    <ClCompile Include="Animation\AnimationDatabase.cpp" />
     <ClCompile Include="Animation\Utils.cpp" />
     <ClCompile Include="Common\Camera.cpp" />
     <ClCompile Include="Common\Color.cpp" />
@@ -231,7 +231,6 @@
     <ClInclude Include="Animation\BlendingJob.h" />
     <ClInclude Include="Animation\Character\Character.h" />
     <ClInclude Include="Animation\Character\CharacterController.h" />
-    <ClInclude Include="Animation\Character\MotionMatchingJob.h" />
     <ClInclude Include="Animation\Common.h" />
     <ClInclude Include="Animation\GradientBandInterpolator.h" />
     <ClInclude Include="Animation\IKAimJob.h" />
@@ -242,8 +241,9 @@
     <ClInclude Include="Animation\MotionAnalyzer.h" />
     <ClInclude Include="Animation\Character\RootMotion.h" />
     <ClInclude Include="Animation\MotionAnalyzerBackwards.h" />
+    <ClInclude Include="Animation\MotionMatchingJob.h" />
     <ClInclude Include="Animation\SamplingJob.h" />
-    <ClInclude Include="Animation\Skeleton.h" />
+    <ClInclude Include="Animation\AnimationDatabase.h" />
     <ClInclude Include="Animation\Spring.h" />
     <ClInclude Include="Animation\Utils.h" />
     <ClInclude Include="Common\Align.h" />

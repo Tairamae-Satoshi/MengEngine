@@ -13,27 +13,25 @@ namespace Animation
 	public:
 		Character();
 
-		Transform transform_;
+		//Transform transform;
 
 		// TOFIX: Find why the model flips
-		Matrix scale = XMMatrixScaling(0.05f, 0.05f, -0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;
+		Matrix scale = XMMatrixScaling(0.05f, 0.05f, 0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;
 
-		Skeleton skeleton_;
+		AnimationDatabase db;
 
-		std::vector<Transform> locals_;
+		std::vector<Transform> locals;
 
-		std::vector<Matrix> models_;
+		std::vector<Matrix> models;
 
-		RootMotion root_motion_;
-
-		CharacterController character_controller_;
+		CharacterController character_controller;
 
 		// Root Motion
-		Vector2 target_velocity_;
+		Vector2 target_velocity;
 
-		bool transition_;
+		bool transition;
 
-		LegController leg_controller_;
+		LegController leg_controller;
 
 		bool Initialize();
 
@@ -41,9 +39,9 @@ namespace Animation
 		void UpdateFinalModelTransform();
 
 		// Foot two bone ik
-		float foot_ik_weight_ = 1.0f;
+		float foot_ik_weight = 1.0f;
 
-		float foot_ik_soften_ = 1.0f;
+		float foot_ik_soften = 1.0f;
 
 		void UpdateFootIK(Vector3 target);
 
@@ -67,8 +65,6 @@ namespace Animation
 		void UpdateBlendingMotion(BlendingJob& _blending_job);
 
 		void UpdateHeadAimAtIK(Vector3 target);
-
-		void UpdateRootMotion(bool transition);
 
 		void UpdateController(float dt);
 	};

@@ -1,7 +1,7 @@
 #pragma once
 #include "../pch.h"
 #include "Animation.h"
-#include "Skeleton.h"
+#include "AnimationDatabase.h"
 #include "MotionAnalyzer.h"
 #include "GradientBandInterpolator.h"
 #include "SamplingJob.h"
@@ -55,7 +55,7 @@ namespace Animation
 
 		MotionGroupInfo* motionGroups;
 
-		Skeleton* skeleton;
+		AnimationDatabase* skeleton;
 
 		const char* kLeftJointNames[4] = { "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToe" };
 		const char* kRightJointNames[4] = { "RightUpLeg", "RightLeg", "RightFoot", "RightToe" };

@@ -1,6 +1,6 @@
 #pragma once
 #include"Animation.h"
-#include"Skeleton.h"
+#include"AnimationDatabase.h"
 
 namespace Animation
 {

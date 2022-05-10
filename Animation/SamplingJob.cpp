@@ -26,7 +26,7 @@ namespace Animation
 		output.resize(numJoint);
 		for (UINT i = 0; i < animation->mSamples.size(); ++i)
 		{
-			animation->mSamples[i].Interpolate(ratio, output[i]);
+			animation->mSamples[i].interpolate(ratio, output[i]);
 		}
 
 		return true;

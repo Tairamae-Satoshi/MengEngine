@@ -2,7 +2,7 @@
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
-#include "Skeleton.h"
+#include "AnimationDatabase.h"
 #include <map>
 #include <algorithm>
 
@@ -57,9 +57,9 @@ public:
 		std::vector<USHORT>& indices,
 		std::vector<Subset>& subsets,
 		std::vector<FbxMaterial>& mats,
-		Skeleton& skeleton);
+		AnimationDatabase& skeleton);
 
-	bool LoadFBXClip(const std::string& filename, Skeleton& skeleton);
+	bool LoadFBXClip(const std::string& filename, AnimationDatabase& skeleton);
 
 private:
 	std::vector<DirectX::XMFLOAT4X4> jointOffsets;

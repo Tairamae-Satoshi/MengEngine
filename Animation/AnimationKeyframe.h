@@ -9,9 +9,20 @@
 struct VectorKey
 {
 	DirectX::SimpleMath::Vector3 mValue = DirectX::SimpleMath::Vector3(0.0f, 0.0f, 0.0f);
+
+	float mTimeTick = 0.0f;
 };
 
 struct QuatKey
 {
 	DirectX::SimpleMath::Quaternion mValue = DirectX::SimpleMath::Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float mTimeTick = 0.0f;
+};
+
+struct Transform
+{
+	QuatKey mRot;
+	VectorKey mTrans;
+	VectorKey mScale;
 };

@@ -55,7 +55,6 @@ namespace Animation
 		{
 			// return false;
 		}
-		char out[150];
 
 
 		// Find toe and heel
@@ -72,7 +71,7 @@ namespace Animation
 
 			Vector3 modelPos;
 			Matrix M = ltmJobWithoutOffset.output[legs[leg].toe];
-			legs[leg].toeToetipVector = Vector3(0.0f, 0.0f, -7.0f);
+			legs[leg].toeToetipVector = Vector3(0.0f, 0.0f, -7.0f);//TODO
 			M = ltmJobWithoutOffset.output[legs[leg].ankle];
 			legs[leg].ankleHeelVector = Vector3(0.0f, -8.5f, 2.0f);
 
