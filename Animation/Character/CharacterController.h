@@ -212,6 +212,27 @@ namespace Animation
 			}
 		}
 
+		void UpdateMatchedData(
+			const std::vector<float>& feature,
+			const Vector3& pos,
+			const Quaternion& rot)
+		{
+			//feature =  mm.DenormalizeFeature(feature);
+			char out[50];
+			sprintf(out, "curr: %f %f %f", feature[1], feature[3], feature[5]);
+			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
+			Vector3 traj0_pos = quat_mul_vec3(rot, Vector3(feature[0], 0, feature[1])) + pos;
+			Vector3 traj1_pos = quat_mul_vec3(rot, Vector3(feature[2], 0, feature[3])) + pos;
+			Vector3 traj2_pos = quat_mul_vec3(rot, Vector3(feature[4], 0, feature[5])) + pos;
+
+			matched_positions[0] = pos;
+			matched_positions[1] = traj0_pos;
+			matched_positions[2] = traj1_pos;
+			matched_positions[3] = traj2_pos;
+
+		}
+
 		void Update(float dT)
 		{
 			float camera_azimuth = 0.0f;
@@ -360,6 +381,7 @@ namespace Animation
 				{
 
 					frame_index = mm.bestIndex;
+
 				}
 
 				// Reset search timer
@@ -404,6 +426,11 @@ namespace Animation
 				desired_rotation,
 				simulation_rotation_halflife,
 				dt);
+
+			std::vector<float> feature = mm.matcherData.get_row(frame_index);
+
+			UpdateMatchedData(mm.DenormalizeFeature(feature), simulation_position, simulation_rotation);
+
 		}
 		// 
 		MotionMatchingJob mm;
@@ -435,8 +462,8 @@ namespace Animation
 		Quaternion simulation_rotation;
 		Vector3 simulation_angular_velocity;
 
-		float simulation_velocity_halflife = 0.5f;
-		float simulation_rotation_halflife = 0.5f;
+		float simulation_velocity_halflife = 0.27f;
+		float simulation_rotation_halflife = 0.27f;
 
 		// All speeds in m/s
 		float simulation_run_fwrd_speed = 4.0f;
@@ -456,6 +483,10 @@ namespace Animation
 		std::vector<Vector3> trajectory_accelerations;
 		std::vector<Quaternion> trajectory_rotations;
 		std::vector<Vector3> trajectory_angular_velocities;
+
+		// Matched data
+		std::vector<Vector3> matched_positions;
+
 
 		float dt = 1.0f / 60.0f; // TODO
 

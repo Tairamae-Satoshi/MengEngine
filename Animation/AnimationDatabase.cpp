@@ -109,11 +109,7 @@ namespace Animation
 	Vector3 AnimationDatabase::GetBonePosition(int poseId, int boneId) const
 	{
 		std::string name = GetAnimationClipNameByPoseId(poseId);
-		int range_start = rangeStarts[poseId];
 		int frameId = poseId - rangeStarts[poseId];
-		mAnimations.at(name).mSamples[boneId];
-		int a = mAnimations.at(name).mSamples[boneId].mLocalPose.size();
-		int b = rangeStops[poseId];
 		return mAnimations.at(name).mSamples[boneId].mLocalPose[frameId].mTrans.mValue;
 	}
 

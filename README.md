@@ -1,6 +1,6 @@
 # README
 
-This is a skeleton animation engine. And a procedural character locomotion system with simple control is implemented in this engine...
+This is a skeleton animation engine. And a procedural character locomotion system with simple controller is implemented in this engine...
 
 
 
@@ -20,6 +20,10 @@ This is a skeleton animation engine. And a procedural character locomotion syste
   - IK
     - [x] Two bone IK
     - [x] Aim IK
+
+  - Motion Matching
+    - [ ] Trajectory matching
+    - [ ] Pose matching
 
 * Character Control
 

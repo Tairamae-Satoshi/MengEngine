@@ -56,12 +56,16 @@ struct RenderItem
 
 	// nullptr if this render-item is not animated by skinned mesh.
 	const AnimationClip* SkinnedModelInst = nullptr;
+
+	Vector4 Color = Vector4::One;
+	//PBRMaterialConstants* materialCB = nullptr;
 };
 
 enum class RenderLayer : int
 {
 	Opaque = 0,
 	SkinnedOpaque,
+	Checkboard,
 	Debug,
 	Sky,
 	Count
@@ -106,6 +110,7 @@ private:
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_PerDrawCB = nullptr;
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_PerPassCB = nullptr;
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_LightCB = nullptr;
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_MaterialCB = nullptr;
 
 	std::shared_ptr<Graphics::Shader> m_StandardVS = nullptr;
 	std::shared_ptr<Graphics::Shader> m_StandardPS = nullptr;
@@ -116,10 +121,22 @@ private:
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_SkinnedPerPassCB = nullptr;
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_SkinnedLightCB = nullptr;
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_SkinnedCB = nullptr;
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_SkinnedMaterialCB = nullptr;
 
 	std::shared_ptr<Graphics::Shader> m_SkinnedVS = nullptr;
 	std::shared_ptr<Graphics::Shader> m_SkinnedPS = nullptr;
 	std::unique_ptr<Graphics::PipelineState> m_SkinnedPassPSO = nullptr;
+
+	// Checkboard Pass
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_CkBPerDrawCB = nullptr;
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_CkBPerPassCB = nullptr;
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_CkBLightCB = nullptr;
+	std::shared_ptr<Graphics::GpuDynamicBuffer> m_CkBMaterialCB = nullptr;
+
+	std::shared_ptr<Graphics::Shader> m_CkBVS = nullptr;
+	std::shared_ptr<Graphics::Shader> m_CkBPS = nullptr;
+	std::unique_ptr<Graphics::PipelineState> m_CkBPSO = nullptr;
+
 
 	// ShadowMap Pass
 	std::shared_ptr<Graphics::GpuDynamicBuffer> m_ShadowMapPerDrawCB = nullptr;
@@ -161,6 +178,7 @@ private:
     PassConstants mShadowPassCB;// index 1 of pass cbuffer.
 	LightConstants mLightConstants;
 	SkinnedConstants mSkinnedConstants;
+	PBRMaterialConstants mMaterialConstants[2];
 
 	// Animation
 	enum { Animation_Num = 9 };
@@ -169,11 +187,25 @@ private:
 
 	const std::string bind_pose_filename = "Contents/Models/bind.fbx";
 
+	//const std::string mAnimationFilename[Animation_Num] =
+	//{
+	//	"Contents/Models/Locomotion//Standard Idle.fbx",
+	//	"Contents/Models/Locomotion//Standard Walk.fbx",
+	//	"Contents/Models/Locomotion//Standard Run.fbx",
+	//	"Contents/Models/Locomotion/Walking Backwards.fbx",
+	//	"Contents/Models/Locomotion/Running Backward.fbx",
+	//	"Contents/Models/Locomotion/left strafe walking.fbx",
+	//	"Contents/Models/Locomotion/right strafe walking.fbx",
+	//	"Contents/Models/Locomotion/left strafe.fbx",
+	//	"Contents/Models/Locomotion/right strafe.fbx"
+	//};
+
+	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
 	{
-		"Contents/Models/Standard Idle.fbx",
-		"Contents/Models/Standard Walk.fbx",
-		"Contents/Models/Standard Run.fbx",
+		"Contents/Models/Locomotion//Standard Idle.fbx",
+		"Contents/Models/Locomotion//Standard Walk.fbx",
+		"Contents/Models/Locomotion//Standard Run.fbx",
 		"Contents/Models/Locomotion/Walking Backwards.fbx",
 		"Contents/Models/Locomotion/Running Backward.fbx",
 		"Contents/Models/Locomotion/left strafe walking.fbx",
@@ -181,6 +213,7 @@ private:
 		"Contents/Models/Locomotion/left strafe.fbx",
 		"Contents/Models/Locomotion/right strafe.fbx"
 	};
+
 
 	//const std::string bind_pose_filename = "Contents/Models/Standard Idle.fbx";
 
@@ -210,6 +243,7 @@ private:
 
 	// Trajectory Points
 	RenderItem* pTrajectoryPointRitems[4];
+	RenderItem* pMatchedPointRitems[4];
 
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
@@ -294,12 +328,12 @@ bool Engine::Initialize()
 
 	shaderCI.FilePath = L"Shaders\\Default.hlsl";
 	shaderCI.EntryPoint = "VS";
-	const D3D_SHADER_MACRO opaqueDefines[] =
-	{
-		"OPAQUE", "1",
-		NULL, NULL
-	};
-	shaderCI.d3dMacros = opaqueDefines;
+	//const D3D_SHADER_MACRO opaqueDefines[] =
+	//{
+	//	"OPAQUE", "1",
+	//	NULL, NULL
+	//};
+	//shaderCI.d3dMacros = opaqueDefines;
 	shaderCI.Desc.ShaderType = Graphics::SHADER_TYPE_VERTEX;
 	m_StandardVS = std::make_shared<Graphics::Shader>(shaderCI);
 
@@ -349,6 +383,76 @@ bool Engine::Initialize()
 	Graphics::ShaderVariable* lightVariable = m_MainPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbLight");
 	if (lightVariable != nullptr)
 		lightVariable->Set(m_LightCB);
+	/*Graphics::ShaderVariable* materialVariable = m_MainPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbMaterial");
+	materialVariable->Set(m_MaterialCB);*/
+
+
+	// PSO for checkboard
+	{
+		Graphics::ShaderCreateInfo shaderCI;
+
+		shaderCI.FilePath = L"Shaders\\Default.hlsl";
+		shaderCI.EntryPoint = "VS";
+		shaderCI.d3dMacros = nullptr;
+		shaderCI.Desc.ShaderType = Graphics::SHADER_TYPE_VERTEX;
+		m_CkBVS = std::make_shared<Graphics::Shader>(shaderCI);
+
+		shaderCI.EntryPoint = "PS";
+		const D3D_SHADER_MACRO checkboardDefines[] =
+		{
+			"CHECKBOARD", "1",
+			NULL, NULL
+		};
+		shaderCI.d3dMacros = checkboardDefines;
+		shaderCI.Desc.ShaderType = Graphics::SHADER_TYPE_PIXEL;
+		m_CkBPS = std::make_shared<Graphics::Shader>(shaderCI);
+
+		Graphics::PipelineStateDesc PSODesc;
+		PSODesc.PipelineType = Graphics::PIPELINE_TYPE_GRAPHIC;
+		PSODesc.GraphicsPipeline.VertexShader = m_CkBVS;
+		PSODesc.GraphicsPipeline.PixelShader = m_CkBPS;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		//PSODesc.GraphicsPipeline.GraphicPipelineState.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		PSODesc.GraphicsPipeline.GraphicPipelineState.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		PSODesc.GraphicsPipeline.GraphicPipelineState.SampleMask = UINT_MAX;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.NumRenderTargets = 1;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.SampleDesc.Count = 1;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.SampleDesc.Quality = 0;
+		PSODesc.GraphicsPipeline.GraphicPipelineState.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+		// TODO: InputLayout
+		UINT inputLayoutIndex = VertexFactory::GetSingleton().GetInputLayoutIndex(false, true, true, true, false, false, false, false);
+		std::vector<D3D12_INPUT_ELEMENT_DESC>* inputLayoutDesc = VertexFactory::GetSingleton().GetInputElementDesc(inputLayoutIndex);
+		PSODesc.GraphicsPipeline.GraphicPipelineState.InputLayout.NumElements = inputLayoutDesc->size();
+		PSODesc.GraphicsPipeline.GraphicPipelineState.InputLayout.pInputElementDescs = inputLayoutDesc->data();
+
+		// shader变量更新频率
+		PSODesc.VariableConfig.Variables.clear();
+		PSODesc.VariableConfig.Variables.push_back(Graphics::ShaderResourceVariableDesc{ Graphics::SHADER_TYPE_PIXEL, "BaseColorTex", Graphics::SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE });
+		PSODesc.VariableConfig.Variables.push_back(Graphics::ShaderResourceVariableDesc{ Graphics::SHADER_TYPE_PIXEL, "MetallicRoughnessTex", Graphics::SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE });
+		PSODesc.VariableConfig.Variables.push_back(Graphics::ShaderResourceVariableDesc{ Graphics::SHADER_TYPE_PIXEL, "EmissiveTex", Graphics::SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE });
+		PSODesc.VariableConfig.Variables.push_back(Graphics::ShaderResourceVariableDesc{ Graphics::SHADER_TYPE_PIXEL, "cbMaterial", Graphics::SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE });
+
+		m_CkBPSO = std::make_unique<Graphics::PipelineState>(&Graphics::RenderDevice::GetSingleton(), PSODesc);
+
+		m_CkBPerDrawCB = std::make_shared<Graphics::GpuDynamicBuffer>(1, sizeof(ObjectConstants));
+		m_CkBPerPassCB = std::make_shared<Graphics::GpuDynamicBuffer>(1, sizeof(PassConstants));
+		m_CkBLightCB = std::make_shared<Graphics::GpuDynamicBuffer>(1, sizeof(LightConstants));
+
+		Graphics::ShaderVariable* ckBPerDrawVariable = m_CkBPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_VERTEX, "cbPerObject");
+		ckBPerDrawVariable->Set(m_CkBPerDrawCB);
+		Graphics::ShaderVariable* ckBPerPassVariable = m_CkBPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_VERTEX, "cbPass");
+		ckBPerPassVariable->Set(m_CkBPerPassCB);
+		Graphics::ShaderVariable* ckBlightVariable = m_CkBPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbLight");
+		if (ckBlightVariable != nullptr)
+			ckBlightVariable->Set(m_CkBLightCB);
+		//Graphics::ShaderVariable* ckBMaterialVariable = m_CkBPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbMaterial");
+		//ckBMaterialVariable->Set(m_CkBMaterialCB);
+	}
+	
 
 	//
 	// PSO for ShadowMap pass.
@@ -444,6 +548,8 @@ bool Engine::Initialize()
 	Graphics::ShaderVariable* skinnedlightVariable = m_SkinnedPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbLight");
 	if (skinnedlightVariable != nullptr)
 		skinnedlightVariable->Set(m_SkinnedLightCB);
+	//Graphics::ShaderVariable* skinnedMaterialVariable = m_SkinnedPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "cbMaterial");
+	//skinnedMaterialVariable->Set(m_SkinnedMaterialCB);
 
 	//
 	// PSO for Skinned ShadowMap pass.
@@ -495,6 +601,15 @@ bool Engine::Initialize()
 	shadowMapVariable = m_SkinnedPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "ShadowMap");
 	if (shadowMapVariable != nullptr)
 		shadowMapVariable->Set(m_ShadowMapSRV);
+
+	shadowMapVariable = m_CkBPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "ShadowMap");
+	if (shadowMapVariable != nullptr)
+		shadowMapVariable->Set(m_ShadowMapSRV);
+	shadowMapVariable = m_SkinnedPassPSO->GetStaticVariableByName(Graphics::SHADER_TYPE_PIXEL, "ShadowMap");
+	if (shadowMapVariable != nullptr)
+		shadowMapVariable->Set(m_ShadowMapSRV);
+
+
 
 	// Set Camera
 	mCamera.SetPosition(0.0f, 25.0f, -50.0f);
@@ -572,12 +687,12 @@ void Engine::Render(const GameTimer& gt)
 	void* pShadowPerPassCB = m_ShadowMapPerPassCB->Map(graphicsContext, 256);
 	memcpy(pShadowPerPassCB, &mShadowPassCB, sizeof(mShadowPassCB));
 
+	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Checkboard], false);
 	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Opaque], false);
 
 	// Shadow Map过度到Read状态
 	graphicsContext.TransitionResource(*m_ShadowMap, D3D12_RESOURCE_STATE_GENERIC_READ);
 
-	// <------------------------------------Main Pass---------------------------------------------->
 	graphicsContext.SetViewport(swapChain.GetViewport());
 	graphicsContext.SetScissor(swapChain.GetScissorRect());
 
@@ -591,6 +706,19 @@ void Engine::Render(const GameTimer& gt)
 	graphicsContext.ClearColor(*backBufferRTV, Colors::LightSteelBlue);
 	graphicsContext.ClearDepthAndStencil(*depthStencilBufferDSV);
 	graphicsContext.SetRenderTargets(1, &backBufferRTV, depthStencilBufferDSV);
+
+	// <------------------------------------Floor Pass---------------------------------------------->
+	graphicsContext.SetPipelineState(m_CkBPSO.get());
+
+	void* ckBPerPassCB = m_CkBPerPassCB->Map(graphicsContext, 256);
+	memcpy(ckBPerPassCB, &mMainPassCB, sizeof(mMainPassCB));
+
+	void* ckBLightCB = m_CkBLightCB->Map(graphicsContext, 256);
+	memcpy(ckBLightCB, &mLightConstants, sizeof(mLightConstants));
+
+	DrawRenderItems(graphicsContext, m_CkBPSO.get(), m_CkBPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Checkboard]);
+
+	// <------------------------------------Main Pass---------------------------------------------->
 
 	graphicsContext.SetPipelineState(m_MainPassPSO.get());
 
@@ -921,18 +1049,25 @@ void Engine::UpdateGUI()
 
 void Engine::UpdateTarget(const GameTimer& gt)
 {
-	float time = gt.TotalTime();
-	Vector3 animated_target(std::sin(time * 0.5f),
-		std::cos(time * 0.25f) * 0.5,
-		std::cos(time * 0.5f + .5f));
-	head_target = head_target_offset + animated_target * 5.0f;
-	XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
+	//float time = gt.TotalTime();
+	//Vector3 animated_target(std::sin(time * 0.5f),
+	//	std::cos(time * 0.25f) * 0.5,
+	//	std::cos(time * 0.5f + .5f));
+	//head_target = head_target_offset + animated_target * 5.0f;
+	//XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
 
 	for (int i = 0; i < 4; i++) {
 		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
 			character.character_controller.trajectory_positions[i].x * 0.05f,
 			0.0f,
 			character.character_controller.trajectory_positions[i].z * 0.05f));
+	}
+
+	for (int i = 0; i < 4; i++) {
+		XMStoreFloat4x4(&pMatchedPointRitems[i]->World, XMMatrixTranslation(
+			character.character_controller.matched_positions[i].x * 0.05f,
+			0.0f,
+			character.character_controller.matched_positions[i].z * 0.05f));
 	}
 }
 
@@ -1230,6 +1365,10 @@ void Engine::BuildMaterials()
 		mMaterials[mSkinnedMats[i].Name] = std::move(mat);
 	}
 
+	//mMaterialConstants[0] = PBRMaterialConstants(Vector4(1.0, 0.0, 0.0f, 1.0f), Vector4(1.0, 0.0, 0.0f, 1.0f), 1.0f, 1.0f);
+	//mMaterialConstants[1] = PBRMaterialConstants(Vector4(0.0, 1.0, 0.0f, 1.0f), Vector4(1.0, 0.0, 0.0f, 1.0f), 1.0f, 1.0f);
+	//mMaterialConstants[2] = PBRMaterialConstants(Vector4(1.0, 1.0, 1.0f, 1.0f), Vector4(1.0, 0.0, 0.0f, 1.0f), 1.0f, 1.0f);
+
 }
 
 void Engine::BuildRenderItems()
@@ -1247,44 +1386,44 @@ void Engine::BuildRenderItems()
     gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
     gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
     gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-
-	mRitemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
+	gridRitem->Color = Colors::White;
+	mRitemLayer[(int)RenderLayer::Checkboard].push_back(gridRitem.get());
 	mAllRitems.push_back(std::move(gridRitem));
 
-	// Foot IK Target
-	auto targetRitem = std::make_unique<RenderItem>();
-	targetRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&targetRitem->World, XMMatrixTranslation(target.x, target.y, target.z));
-	XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
-	targetRitem->ObjCBIndex = objCBIndex++;
-	targetRitem->Mat = mMaterials["tile0"].get();
-	targetRitem->Geo = mGeometries["shapeGeo"].get();
-	targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	targetRitem->IndexCount = targetRitem->Geo->DrawArgs["sphere"].IndexCount;
-	targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	//// Foot IK Target
+	//auto targetRitem = std::make_unique<RenderItem>();
+	//targetRitem->World = MathHelper::Identity4x4();
+	//XMStoreFloat4x4(&targetRitem->World, XMMatrixTranslation(target.x, target.y, target.z));
+	//XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
+	//targetRitem->ObjCBIndex = objCBIndex++;
+	//targetRitem->Mat = mMaterials["tile0"].get();
+	//targetRitem->Geo = mGeometries["shapeGeo"].get();
+	//targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//targetRitem->IndexCount = targetRitem->Geo->DrawArgs["sphere"].IndexCount;
+	//targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	//targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
 
 
-	mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
-	pTargetRitem = targetRitem.get();
-	mAllRitems.push_back(std::move(targetRitem));
+	//mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
+	//pTargetRitem = targetRitem.get();
+	//mAllRitems.push_back(std::move(targetRitem));
 
-	// Head IK Target
-	auto head_target_ritem = std::make_unique<RenderItem>();
-	head_target_ritem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&head_target_ritem->World, XMMatrixTranslation(head_target.x, head_target.y, head_target.z));
-	XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
-	head_target_ritem->ObjCBIndex = objCBIndex++;
-	head_target_ritem->Mat = mMaterials["tile0"].get();
-	head_target_ritem->Geo = mGeometries["shapeGeo"].get();
-	head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["sphere"].IndexCount;
-	head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	//// Head IK Target
+	//auto head_target_ritem = std::make_unique<RenderItem>();
+	//head_target_ritem->World = MathHelper::Identity4x4();
+	//XMStoreFloat4x4(&head_target_ritem->World, XMMatrixTranslation(head_target.x, head_target.y, head_target.z));
+	//XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
+	//head_target_ritem->ObjCBIndex = objCBIndex++;
+	//head_target_ritem->Mat = mMaterials["tile0"].get();
+	//head_target_ritem->Geo = mGeometries["shapeGeo"].get();
+	//head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["sphere"].IndexCount;
+	//head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	//head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["sphere"].BaseVertexLocation;
 
-	mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
-	pHeadAimTargetRitem = head_target_ritem.get();
-	mAllRitems.push_back(std::move(head_target_ritem));
+	//mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
+	//pHeadAimTargetRitem = head_target_ritem.get();
+	//mAllRitems.push_back(std::move(head_target_ritem));
 	
 	// Trajectory
 	for (int i = 0; i < 4; i++) {
@@ -1299,10 +1438,32 @@ void Engine::BuildRenderItems()
 		trajectoryPointRitem->IndexCount = trajectoryPointRitem->Geo->DrawArgs["sphere"].IndexCount;
 		trajectoryPointRitem->StartIndexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
 		trajectoryPointRitem->BaseVertexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+		trajectoryPointRitem->Color = Colors::Yellow;
 
 		mRitemLayer[(int)RenderLayer::Opaque].push_back(trajectoryPointRitem.get());
 		pTrajectoryPointRitems[i] = trajectoryPointRitem.get();
 		mAllRitems.push_back(std::move(trajectoryPointRitem));
+
+	}
+
+	// Matched
+	for (int i = 0; i < 4; i++) {
+		auto matchedPointRitem = std::make_unique<RenderItem>();
+		matchedPointRitem->World = MathHelper::Identity4x4();
+		XMStoreFloat4x4(&matchedPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+		XMStoreFloat4x4(&matchedPointRitem->TexTransform, Matrix::Identity);
+		matchedPointRitem->ObjCBIndex = objCBIndex++;
+		matchedPointRitem->Mat = mMaterials["tile0"].get();
+		matchedPointRitem->Geo = mGeometries["shapeGeo"].get();
+		matchedPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		matchedPointRitem->IndexCount = matchedPointRitem->Geo->DrawArgs["sphere"].IndexCount;
+		matchedPointRitem->StartIndexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+		matchedPointRitem->BaseVertexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+		matchedPointRitem->Color = Colors::LightGreen;
+
+		mRitemLayer[(int)RenderLayer::Opaque].push_back(matchedPointRitem.get());
+		pMatchedPointRitems[i] = matchedPointRitem.get();
+		mAllRitems.push_back(std::move(matchedPointRitem));
 
 	}
 
@@ -1325,6 +1486,7 @@ void Engine::BuildRenderItems()
 			ritem->IndexCount = ritem->Geo->DrawArgs[submeshName].IndexCount;
 			ritem->StartIndexLocation = ritem->Geo->DrawArgs[submeshName].StartIndexLocation;
 			ritem->BaseVertexLocation = ritem->Geo->DrawArgs[submeshName].BaseVertexLocation;
+			ritem->Color = Colors::White;
 
 			// All render items for this solider.m3d instance share
 			// the same skinned model instance.
@@ -1393,6 +1555,7 @@ void Engine::DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphic
 		XMMATRIX object = XMMatrixInverse(nullptr, world);
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.Obejct, XMMatrixTranspose(object));
+		XMStoreFloat4(&objConstants.Color, XMLoadFloat4(&ri->Color));
 		void* pPerDrawCB = perDrawCB->Map(graphicsContext, 256);
 		memcpy(pPerDrawCB, &objConstants, sizeof(ObjectConstants));
 

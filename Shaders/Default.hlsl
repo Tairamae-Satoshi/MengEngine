@@ -33,6 +33,7 @@ cbuffer cbPerObject
 {
 	float4x4 gWorld;
 	float4x4 gObject;
+	float4 gColor;
 };
 
 // Constant data that varies per material.
@@ -298,6 +299,7 @@ struct VertexOut
 	float3 NormalW : NORMAL;
 	float3 TangentW : TANGENT;
 	float2 TexC    : TEXCOORD;
+	float4 Color : POSITION2; // TODO
 };
 
 VertexOut VS(VertexIn vin)
@@ -337,6 +339,7 @@ VertexOut VS(VertexIn vin)
 	vout.NormalW = normalize(mul((float3x3)gObject, vin.NormalL));
 	vout.TangentW = mul(vin.TangentL, (float3x3)gWorld);
 	vout.TexC = vin.TexC;
+	vout.Color = gColor;
 
 	// Generate projective tex-coords to project shadow map onto scene.
 	vout.ShadowPosH = mul(posW, gShadowTransform);
@@ -348,13 +351,12 @@ VertexOut VS(VertexIn vin)
 float4 PS(VertexOut pin) : SV_Target
 {
 	// Fetch the material data.
-	float4	diffuseAlbedo = float4(0.8f, 0.8f, 0.8f, 1.0f);
-#ifdef OPAQUE
+	float4	diffuseAlbedo = pin.Color/*float4(0.75f, 0.75f, 0.75f, 1.0f)*/;
+#ifdef CHECKBOARD
 	float total = floor(pin.PosW.x * 0.5f) + floor(pin.PosW.z * 0.5f);
 	diffuseAlbedo = (total % 2.0f) == 0.0f ?
 		float4(0.75f, 0.75f, 0.75f, 1.0f):
 		float4(0.85f, 0.85f, 0.85f, 1.0f);
-	//diffuseAlbedo = BaseColorTex.Sample(gsamLinearWrap, pin.TexC);
 #endif
 	float4 metallic = MetallicFactor;
 	float  roughness = 0.5;

@@ -23,6 +23,14 @@ namespace Animation
 
 		const T& get(int r, int c) const { return data[cols * r + c]; }
 
+		std::vector<T> get_row(int r) const {
+			std::vector<T> row;
+			for (int i = 0; i < cols; i++)
+			{
+				row.push_back(data[cols * r + i]);
+			}
+			return row;
+		}
 	};
 
 
@@ -69,27 +77,15 @@ namespace Animation
 		{
 			std::vector<Transform> transforms = db.GetTransformsAtPoseId(poseIndex);
 
-			int t0 = db.ClampDatabaseTrajectoryIndex(poseIndex, 20);
-			int t1 = db.ClampDatabaseTrajectoryIndex(poseIndex, 40);
-			int t2 = db.ClampDatabaseTrajectoryIndex(poseIndex, 60);
+			int interval = 20;
+			int t0 = db.ClampDatabaseTrajectoryIndex(poseIndex, interval);
+			int t1 = db.ClampDatabaseTrajectoryIndex(poseIndex, 2 * interval);
+			int t2 = db.ClampDatabaseTrajectoryIndex(poseIndex, 3 * interval);
 
-			//{
-			//	char out[100];
-			//	//sprintf(out, "%d: %f, %f, %f", poseIndex, db.GetBonePosition(poseIndex, 0).x, db.GetBonePosition(poseIndex, 0).y, db.GetBonePosition(poseIndex, 0).z);
-			//	sprintf(out, "t0 = %d, i = %d: %f, %f, %f | ", t0, poseIndex,
-			//		db.GetBonePosition(t0, 0).z - db.GetBonePosition(poseIndex, 0).z,
-			//		db.GetBonePosition(t1, 0).z - db.GetBonePosition(poseIndex, 0).z,
-			//		db.GetBonePosition(t2, 0).z - db.GetBonePosition(poseIndex, 0).z);
-			//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
-
-			//}
-			//if (poseIndex > 400)
-			//{
-			//	int a = 2;
-			//}
-			Vector3 trajectoryPos0 = quat_mul_vec3(db.GetBoneRotation(poseIndex, 0).Inversed(), db.GetBonePosition(t0, 0) - db.GetBonePosition(poseIndex, 0));
-			Vector3 trajectoryPos1 = quat_mul_vec3(db.GetBoneRotation(poseIndex, 0).Inversed(), db.GetBonePosition(t1, 0) - db.GetBonePosition(poseIndex, 0));
-			Vector3 trajectoryPos2 = quat_mul_vec3(db.GetBoneRotation(poseIndex, 0).Inversed(), db.GetBonePosition(t2, 0) - db.GetBonePosition(poseIndex, 0));
+			Quaternion base = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), MathHelper::Pi);
+			Vector3 trajectoryPos0 = quat_mul_vec3((/*db.GetBoneRotation(poseIndex, 0) **/ base).Inversed(), db.GetBonePosition(t0, 0) - db.GetBonePosition(poseIndex, 0));
+			Vector3 trajectoryPos1 = quat_mul_vec3((/*db.GetBoneRotation(poseIndex, 0) **/ base).Inversed(), db.GetBonePosition(t1, 0) - db.GetBonePosition(poseIndex, 0));
+			Vector3 trajectoryPos2 = quat_mul_vec3((/*db.GetBoneRotation(poseIndex, 0) **/ base).Inversed(), db.GetBonePosition(t2, 0) - db.GetBonePosition(poseIndex, 0));
 
 			// Need trasform the coordinate relative to simulation rotation		
 			ResultLocation[0] = trajectoryPos0.x;
@@ -98,6 +94,7 @@ namespace Animation
 			ResultLocation[3] = trajectoryPos1.z;
 			ResultLocation[4] = trajectoryPos2.x;
 			ResultLocation[5] = trajectoryPos2.z;
+
 		}
 
 
@@ -133,9 +130,10 @@ namespace Animation
 			int poseIndex
 		) const override
 		{
-			int t0 = db.ClampDatabaseTrajectoryIndex(poseIndex, 20);
-			int t1 = db.ClampDatabaseTrajectoryIndex(poseIndex, 40);
-			int t2 = db.ClampDatabaseTrajectoryIndex(poseIndex, 60);
+			int interval = 20;
+			int t0 = db.ClampDatabaseTrajectoryIndex(poseIndex, interval);
+			int t1 = db.ClampDatabaseTrajectoryIndex(poseIndex, 2 * interval);
+			int t2 = db.ClampDatabaseTrajectoryIndex(poseIndex, 3 * interval);
 
 			Vector3 trajectoryDir0 = quat_mul_vec3(db.GetBoneRotation(poseIndex, 0).Inversed(), quat_mul_vec3(db.GetBoneRotation(t0, 0), Vector3(0, 0, 1)));
 			Vector3 trajectoryDir1 = quat_mul_vec3(db.GetBoneRotation(poseIndex, 0).Inversed(), quat_mul_vec3(db.GetBoneRotation(t1, 0), Vector3(0, 0, 1)));
@@ -249,6 +247,10 @@ namespace Animation
 
 			for (int poseIndex = 0; poseIndex < matcherData.rows; poseIndex++)
 			{
+
+				if (poseIndex + 10 > animDatabase->rangeStops[poseIndex])
+					continue;
+
 				float currCost = 0.0f;
 
 				for (int dimIndex = 0; dimIndex < matcherData.cols; dimIndex++)
@@ -266,24 +268,6 @@ namespace Animation
 
 			return true;
 		}
-
-		Array2D<float> matcherData;
-
-		std::vector<float> featuresOffset;
-
-		std::vector<float> featuresScale;
-
-		AnimationDatabase* animDatabase;
-
-		TrajectoryPositionFeature trajectoryPositionFeature;
-
-		TrajectoryDirectionFeature trajectoryDirectionFeature;
-
-		FeatureArray featureArray;
-
-		float bestCost = FLT_MAX;
-
-		int bestIndex = -1;
 
 		void NormalizeFeature(
 			Feature* feature,
@@ -342,6 +326,37 @@ namespace Animation
 			}
 
 		}
+
+		std::vector<float> DenormalizeFeature(
+			const std::vector<float>& query)
+		{
+			std::vector<float> denormalizedQuery;
+			for (int i = 0; i < query.size(); i++)
+			{
+				denormalizedQuery.push_back(query[i] * featuresScale[i] + featuresOffset[i]);
+			}
+			return denormalizedQuery;
+		}
+
+		Array2D<float> matcherData;
+
+		std::vector<float> featuresOffset;
+
+		std::vector<float> featuresScale;
+
+		AnimationDatabase* animDatabase;
+
+		TrajectoryPositionFeature trajectoryPositionFeature;
+
+		TrajectoryDirectionFeature trajectoryDirectionFeature;
+
+		FeatureArray featureArray;
+
+		float bestCost = FLT_MAX;
+
+		int bestIndex = -1;
+
+		
 	};
 }
 

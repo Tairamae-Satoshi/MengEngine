@@ -27,6 +27,8 @@ namespace Animation
 		trajectory_rotations.resize(trajectory_points_size);
 		trajectory_angular_velocities.resize(trajectory_points_size);
 
+		matched_positions.resize(trajectory_points_size);
+
 		// Build Motion Matching Job
 		mm.Build();
 	}

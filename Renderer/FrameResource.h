@@ -8,6 +8,7 @@ struct ObjectConstants
 {
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 Obejct = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4 Color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
 struct SkinnedConstants
@@ -66,6 +67,20 @@ struct SkinnedVertex
 
 struct PBRMaterialConstants
 {
+	PBRMaterialConstants() 
+	{}
+
+	PBRMaterialConstants(
+		DirectX::XMFLOAT4 base_color,
+		DirectX::XMFLOAT4 emissive,
+		float metallic,
+		float roughness):
+		BaseColorFactor(base_color),
+		EmissiveFactor(emissive),
+		MetallicFactor(metallic),
+		RoughnessFactor(roughness)
+	{}
+
 	DirectX::XMFLOAT4 BaseColorFactor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT4 EmissiveFactor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float  MetallicFactor = 1.0f;
