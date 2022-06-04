@@ -39,6 +39,10 @@ namespace DirectX
 		struct Quaternion;
 		struct Plane;
 
+		static float FloatInertialize(float x0, float v0, float t1, float t) noexcept;
+		static float Inertialize(float prev, float curr, float target, float dt, float t1, float t)noexcept;
+
+
 		//------------------------------------------------------------------------------
 		// 2D rectangle
 		struct Rectangle
@@ -278,6 +282,8 @@ namespace DirectX
 
 			static void Lerp(const Vector3& v1, const Vector3& v2, float t, Vector3& result) noexcept;
 			static Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t) noexcept;
+
+			static Vector3 Inertialize(Vector3 prev, Vector3 curr, Vector3 target, float dt, float tf, float t)noexcept;
 
 			static void SmoothStep(const Vector3& v1, const Vector3& v2, float t, Vector3& result) noexcept;
 			static Vector3 SmoothStep(const Vector3& v1, const Vector3& v2, float t) noexcept;
@@ -728,6 +734,8 @@ namespace DirectX
 			static void Slerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion& result) noexcept;
 			static Quaternion Slerp(const Quaternion& q1, const Quaternion& q2, float t) noexcept;
 
+			static Quaternion Inertialize(const Quaternion& prev, const Quaternion& curr, Quaternion& target, float dt, float t1, float t) noexcept;
+
 			static void Concatenate(const Quaternion& q1, const Quaternion& q2, Quaternion& result) noexcept;
 			static Quaternion Concatenate(const Quaternion& q1, const Quaternion& q2) noexcept;
 
@@ -736,6 +744,8 @@ namespace DirectX
 			//static float Distance(const Quaternion& q1, const Quaternion& q2) noexcept;
 
 			static Quaternion Exp(const Vector4& v) noexcept;
+
+			void GetAxisAngle(Vector3& axis, float& angle) noexcept;
 
 			// Constants
 			static const Quaternion Identity;

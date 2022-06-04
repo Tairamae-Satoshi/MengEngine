@@ -78,9 +78,10 @@ namespace Animation
 
 		std::map<std::string, int> offsets;
 
+		std::vector<int> mJointHierarchy;
+
 	private:
 		// Gives parentIndex of ith bone.
-		std::vector<int> mJointHierarchy;
 
 		std::vector<std::string> mJointNames;
 

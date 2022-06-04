@@ -233,13 +233,18 @@ private:
 	Character character;
 
 	// Two Bone IK
-	RenderItem* pTargetRitem;
-	Vector3 target = Vector3(-1.0f, 2.0f, -3.0f);
+	float inertialize_t = 0.0f;
+
+	RenderItem* pSourceRitem;
+	Vector3 source_pos = Vector3(-1.0f, 2.0f, -3.0f);
+	Vector3 pre_source_pos = Vector3(-0.0f, 1.0f, -3.0f);
+	Quaternion source_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.3f*MathHelper::Pi);
+	Quaternion pre_source_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.2f * MathHelper::Pi);
 
 	// Head Aim IK
-	RenderItem* pHeadAimTargetRitem;
-	Vector3 head_target_offset = Vector3(-1.0f, 7.0f, -3.0f);
-	Vector3 head_target = Vector3(-1.0f, 10.0f, -3.0f);
+	RenderItem* pTargetRitem;
+	Vector3 target_pos = Vector3(-1.0f, 10.0f, -3.0f);
+	Quaternion target_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.8f * MathHelper::Pi);
 
 	// Trajectory Points
 	RenderItem* pTrajectoryPointRitems[4];
@@ -993,11 +998,11 @@ void Engine::UpdateGUI()
 		character.db.OnGui();
 		mController.OnGui();
 		//blender.OnGui();
-		float t[3] = { target.x, target.y, target.z };
+		float t[3] = { source_pos.x, source_pos.y, source_pos.z };
 		if (ImGui::InputFloat3("Target", t))
 		{
-			target = Vector3(t);
-			XMStoreFloat4x4(&pTargetRitem->World, XMMatrixTranslation(target.x, target.y, target.z));
+			source_pos = Vector3(t);
+			XMStoreFloat4x4(&pSourceRitem->World, XMMatrixTranslation(source_pos.x, source_pos.y, source_pos.z));
 		}
 		ImGui::SliderFloat("Weight", &character.foot_ik_weight, 0.0f, 1.0f);
 		ImGui::SliderFloat("Soften", &character.foot_ik_soften, 0.0f, 1.0f);
@@ -1055,6 +1060,34 @@ void Engine::UpdateTarget(const GameTimer& gt)
 	//	std::cos(time * 0.5f + .5f));
 	//head_target = head_target_offset + animated_target * 5.0f;
 	//XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
+	if (inertialize_t < 5.0f)
+	{
+		inertialize_t += gt.DeltaTime();
+		Vector3 curr_pos = Vector3::Inertialize(pre_source_pos, source_pos, target_pos, 1.0f, 5.0f, inertialize_t);
+		Quaternion curr_rot = Quaternion::Inertialize(pre_source_rot, source_rot, target_rot, 1.0f, 5.0f, inertialize_t);
+		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, curr_pos, curr_rot));
+		
+		float angle;
+		Vector3 axis;
+		curr_rot.GetAxisAngle(axis, angle);
+		char out[200];
+		sprintf(out, "angle = %f, axis = (%f, %f, %f)", angle/MathHelper::Pi, axis.x, axis.y, axis.z);
+		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1072, out);
+
+	}
+	else
+	{
+		float angle;
+		Vector3 axis;
+		source_rot.GetAxisAngle(axis, angle);
+		char out[200];
+		sprintf(out, "\n\n\n\nangle = %f, axis = (%f, %f, %f)", angle/MathHelper::Pi, axis.x, axis.y, axis.z);
+		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1072, out);
+
+		inertialize_t = 0.0f;
+		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
+	}
+	
 
 	for (int i = 0; i < 4; i++) {
 		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
@@ -1391,39 +1424,39 @@ void Engine::BuildRenderItems()
 	mAllRitems.push_back(std::move(gridRitem));
 
 	//// Foot IK Target
-	//auto targetRitem = std::make_unique<RenderItem>();
-	//targetRitem->World = MathHelper::Identity4x4();
-	//XMStoreFloat4x4(&targetRitem->World, XMMatrixTranslation(target.x, target.y, target.z));
-	//XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
-	//targetRitem->ObjCBIndex = objCBIndex++;
-	//targetRitem->Mat = mMaterials["tile0"].get();
-	//targetRitem->Geo = mGeometries["shapeGeo"].get();
-	//targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//targetRitem->IndexCount = targetRitem->Geo->DrawArgs["sphere"].IndexCount;
-	//targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	//targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	auto targetRitem = std::make_unique<RenderItem>();
+	targetRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&targetRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
+	XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
+	targetRitem->ObjCBIndex = objCBIndex++;
+	targetRitem->Mat = mMaterials["tile0"].get();
+	targetRitem->Geo = mGeometries["shapeGeo"].get();
+	targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	targetRitem->IndexCount = targetRitem->Geo->DrawArgs["box"].IndexCount;
+	targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["box"].StartIndexLocation;
+	targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 
 
-	//mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
-	//pTargetRitem = targetRitem.get();
-	//mAllRitems.push_back(std::move(targetRitem));
+	mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
+	pSourceRitem = targetRitem.get();
+	mAllRitems.push_back(std::move(targetRitem));
 
 	//// Head IK Target
-	//auto head_target_ritem = std::make_unique<RenderItem>();
-	//head_target_ritem->World = MathHelper::Identity4x4();
-	//XMStoreFloat4x4(&head_target_ritem->World, XMMatrixTranslation(head_target.x, head_target.y, head_target.z));
-	//XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
-	//head_target_ritem->ObjCBIndex = objCBIndex++;
-	//head_target_ritem->Mat = mMaterials["tile0"].get();
-	//head_target_ritem->Geo = mGeometries["shapeGeo"].get();
-	//head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["sphere"].IndexCount;
-	//head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	//head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	auto head_target_ritem = std::make_unique<RenderItem>();
+	head_target_ritem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&head_target_ritem->World, Matrix::CreateAffineTransformation(Vector3::One, target_pos, target_rot));
+	XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
+	head_target_ritem->ObjCBIndex = objCBIndex++;
+	head_target_ritem->Mat = mMaterials["tile0"].get();
+	head_target_ritem->Geo = mGeometries["shapeGeo"].get();
+	head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["box"].IndexCount;
+	head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["box"].StartIndexLocation;
+	head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["box"].BaseVertexLocation;
 
-	//mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
-	//pHeadAimTargetRitem = head_target_ritem.get();
-	//mAllRitems.push_back(std::move(head_target_ritem));
+	mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
+	pTargetRitem = head_target_ritem.get();
+	mAllRitems.push_back(std::move(head_target_ritem));
 	
 	// Trajectory
 	for (int i = 0; i < 4; i++) {

@@ -218,9 +218,9 @@ namespace Animation
 			const Quaternion& rot)
 		{
 			//feature =  mm.DenormalizeFeature(feature);
-			char out[50];
-			sprintf(out, "curr: %f %f %f", feature[1], feature[3], feature[5]);
-			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+			//char out[50];
+			//sprintf(out, "curr: %f %f %f", feature[1], feature[3], feature[5]);
+			//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
 
 			Vector3 traj0_pos = quat_mul_vec3(rot, Vector3(feature[0], 0, feature[1])) + pos;
 			Vector3 traj1_pos = quat_mul_vec3(rot, Vector3(feature[2], 0, feature[3])) + pos;

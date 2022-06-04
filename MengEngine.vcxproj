@@ -237,6 +237,7 @@
     <ClInclude Include="Animation\IKTwoBoneJob.h" />
     <ClInclude Include="Animation\Interpolator.h" />
     <ClInclude Include="Animation\LegController.h" />
+    <ClInclude Include="Animation\LoadBin.h" />
     <ClInclude Include="Animation\LocalToModelJob.h" />
     <ClInclude Include="Animation\MotionAnalyzer.h" />
     <ClInclude Include="Animation\Character\RootMotion.h" />

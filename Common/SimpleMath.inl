@@ -1077,6 +1077,67 @@ inline Vector3 Vector3::Lerp(const Vector3& v1, const Vector3& v2, float t) noex
 	return result;
 }
 
+inline float FloatInertialize(float x0, float v0, float t1, float t) noexcept
+{
+	float t1min = -5 * x0 / v0;//防止over shoot的阈值时间
+	if (t1min > 0)t1 = t1 < t1min ? t1 : t1min;//超过阈值就取阈值
+
+
+	float tf2 = t1 * t1;//最终时间参数t1的平方
+	float tf3 = tf2 * t1;
+	float tf4 = tf3 * t1;
+	float tf5 = tf4 * t1;//最终时间参数t1的5次方
+
+	float a0 = (-8 * v0 * t1 - 20 * x0) / (t1 * t1);//加速度
+	//系数计算
+	float A = -(a0 * tf2 + 6 * v0 * t1 + 12 * x0) / (2 * tf5);
+	float B = (3 * a0 * tf2 + 16 * v0 * t1 + 30 * x0) / (2 * tf4);
+	float C = -(3 * a0 * tf2 + 12 * v0 * t1 + 20 * x0) / (2 * tf3);
+	//D 就是(a0 / 2) E就是v0 F是x0
+
+	float t2 = t * t;//t的平方
+	float t3 = t2 * t;
+	float t4 = t3 * t;
+	float t5 = t4 * t;
+
+	float xt = A * t5 + B * t4 + C * t3 + (a0 / 2) * t2 + v0 * t + x0;
+
+
+	if (t1 < FLT_MIN)
+		xt = 0;
+
+	return xt;
+}
+
+inline float Inertialize(float prev, float curr, float target, float dt, float t1, float t) noexcept
+{
+
+	float x0 = curr - target;
+	float preX0 = prev - target;
+	float v0 = (x0 - preX0) / dt;
+
+	return DirectX::SimpleMath::FloatInertialize(x0, v0, t1, t) + target;
+}
+
+inline Vector3 Vector3::Inertialize(Vector3 prev, Vector3 curr, Vector3 target, float dt, float tf, float t) noexcept
+{
+	using namespace DirectX;
+
+	Vector3 x0 = curr - target;
+	Vector3 prev_x0 = prev - target;
+
+	float x0_len = x0.Length();
+
+	Vector3 x0_dir = x0.Normalized();
+	float prev_x0_len = prev_x0.Dot(x0_dir);
+	float v0 = (x0_len - prev_x0_len) / dt;
+
+	float xt = FloatInertialize(x0_len, v0, tf, t);
+
+	return xt * x0_dir + target;
+}
+
+
 inline void Vector3::SmoothStep(const Vector3& v1, const Vector3& v2, float t, Vector3& result) noexcept
 {
 	using namespace DirectX;
@@ -3261,6 +3322,29 @@ inline Quaternion Quaternion::Slerp(const Quaternion& q1, const Quaternion& q2, 
 	return result;
 }
 
+inline Quaternion Quaternion::Inertialize(const Quaternion& prev, const Quaternion& curr, Quaternion& target, float dt, float tf, float t) noexcept
+{
+	Quaternion q0 = curr * target.Inversed();
+	Quaternion pre_q0 = prev * target.Inversed();
+
+	Vector3 cur_x0_axis;
+	float cur_x0_angle;
+	q0.GetAxisAngle(cur_x0_axis, cur_x0_angle);
+	Vector3 pre_x0_axis;
+	float pre_x0_angle;
+	pre_q0.GetAxisAngle(pre_x0_axis, pre_x0_angle);
+	pre_x0_axis.Normalize();
+
+	float pre_x0_proj_angle = 2 * atan(cur_x0_axis.Dot(pre_x0_axis) * tan(pre_x0_angle * 0.5f));
+	float v0 = (cur_x0_angle - pre_x0_proj_angle) / dt;
+
+	float xt = FloatInertialize(cur_x0_angle, v0, tf, t);
+
+	Quaternion qt = Quaternion::CreateFromAxisAngle(cur_x0_axis, xt) * target;
+
+	return qt;
+}
+
 inline void Quaternion::Concatenate(const Quaternion& q1, const Quaternion& q2, Quaternion& result) noexcept
 {
 	using namespace DirectX;
@@ -3306,6 +3390,17 @@ inline Quaternion Quaternion::Exp(const Vector4& v) noexcept
 	Quaternion result;
 	XMStoreFloat4(&result, XMQuaternionExp(V));
 	return result;
+}
+
+inline void Quaternion::GetAxisAngle(Vector3& axis, float& angle) noexcept
+{
+	using namespace DirectX;
+
+	XMVECTOR axis_v;
+	XMVECTOR quat_v = XMLoadFloat4(this);
+	XMQuaternionToAxisAngle(&axis_v, &angle, quat_v);
+
+	XMStoreFloat3(&axis, axis_v);
 }
 
 /****************************************************************************
