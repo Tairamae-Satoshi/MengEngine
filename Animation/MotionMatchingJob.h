@@ -1,5 +1,4 @@
 #pragma once
-#include "../pch.h"
 #include "Spring.h"
 #include "AnimationDatabase.h"
 using namespace DirectX::SimpleMath;
@@ -36,6 +35,10 @@ namespace Animation
 
 	struct RuntimeCharacterData
 	{
+		std::vector<Transform> transforms;
+
+		std::vector<int> parent_index;
+
 		Vector3 root_position;
 
 		Quaternion root_rotation;
@@ -169,6 +172,137 @@ namespace Animation
 		}
 	};
 
+	void ForwardKinematics(
+		Vector3& bone_position,
+		Quaternion& bone_rotation,
+		const std::vector<Transform>& bone_transforms,
+		const std::vector<int>& bone_parents,
+		const int bone);
+
+	struct LeftFootPositionFeature :Feature{
+		virtual int Size() const override
+		{
+			return 3; // p1.x, p1.y, p2.x, p2.y, p3.x, p3.y 
+		}
+
+		virtual void EvaluateForAnimationPose(
+			float* ResultLocation,
+			const AnimationDatabase& db,
+			int poseIndex
+		) const override
+		{
+
+			int leftFootId = 46; // Hard coding for now
+			// 46 50
+			Vector3 bone_position;
+			Quaternion bone_rotation;
+
+			std::vector<Transform> transform = db.GetTransformsAtPoseId(poseIndex);
+			ForwardKinematics(
+				bone_position,
+				bone_rotation,
+				transform,
+				db.GetParentIndex(),
+				leftFootId);
+
+			bone_position = quat_inv_mul_vec3(transform[0].mRot.mValue, bone_position - transform[0].mTrans.mValue);
+
+			// Need trasform the coordinate relative to simulation rotation
+			ResultLocation[0] = bone_position.x;
+			ResultLocation[1] = bone_position.y;
+			ResultLocation[2] = bone_position.x;
+
+		}
+
+		virtual void EvaluateForRuntimeGuy(
+			float* ResultLocation,
+			const RuntimeCharacterData& runtimeData
+		) const override
+		{
+			int leftFootId = 46; // Hard coding for now
+			// 46 50
+			Vector3 bone_position;
+			Quaternion bone_rotation;
+
+			ForwardKinematics(
+				bone_position,
+				bone_rotation,
+				runtimeData.transforms,
+				runtimeData.parent_index,
+				leftFootId);
+
+			bone_position = quat_inv_mul_vec3(runtimeData.transforms[0].mRot.mValue, bone_position - runtimeData.transforms[0].mTrans.mValue);
+
+			// Need trasform the coordinate relative to simulation rotation
+			ResultLocation[0] = bone_position.x;
+			ResultLocation[1] = bone_position.y;
+			ResultLocation[2] = bone_position.x;
+
+		}
+	};
+
+	struct RightFootPositionFeature :Feature {
+		virtual int Size() const override
+		{
+			return 3; // p1.x, p1.y, p2.x, p2.y, p3.x, p3.y 
+		}
+
+		virtual void EvaluateForAnimationPose(
+			float* ResultLocation,
+			const AnimationDatabase& db,
+			int poseIndex
+		) const override
+		{
+
+			int RightFootId = 50; // Hard coding for now
+			// 46 50
+			Vector3 bone_position;
+			Quaternion bone_rotation;
+
+			std::vector<Transform> transform = db.GetTransformsAtPoseId(poseIndex);
+			ForwardKinematics(
+				bone_position,
+				bone_rotation,
+				transform,
+				db.GetParentIndex(),
+				RightFootId);
+
+			bone_position = quat_inv_mul_vec3(transform[0].mRot.mValue, bone_position - transform[0].mTrans.mValue);
+
+			// Need trasform the coordinate relative to simulation rotation
+			ResultLocation[0] = bone_position.x;
+			ResultLocation[1] = bone_position.y;
+			ResultLocation[2] = bone_position.x;
+
+		}
+
+		virtual void EvaluateForRuntimeGuy(
+			float* ResultLocation,
+			const RuntimeCharacterData& runtimeData
+		) const override
+		{
+			int leftFootId = 50; // Hard coding for now
+			// 46 50
+			Vector3 bone_position;
+			Quaternion bone_rotation;
+
+			ForwardKinematics(
+				bone_position,
+				bone_rotation,
+				runtimeData.transforms,
+				runtimeData.parent_index,
+				leftFootId);
+
+			bone_position = quat_inv_mul_vec3(runtimeData.transforms[0].mRot.mValue, bone_position - runtimeData.transforms[0].mTrans.mValue);
+
+			// Need trasform the coordinate relative to simulation rotation
+			ResultLocation[0] = bone_position.x;
+			ResultLocation[1] = bone_position.y;
+			ResultLocation[2] = bone_position.x;
+
+		}
+	};
+
 	struct FeatureArray
 	{
 		std::vector<Feature*> features;
@@ -204,6 +338,8 @@ namespace Animation
 		{
 			featureArray.features.push_back(&trajectoryPositionFeature);
 			featureArray.features.push_back(&trajectoryDirectionFeature);
+			featureArray.features.push_back(&leftFootPositionFeature);
+			featureArray.features.push_back(&rightFootPositionFeature);
 
 			featureArray.ComputeOffset();
 
@@ -345,6 +481,10 @@ namespace Animation
 		std::vector<float> featuresScale;
 
 		AnimationDatabase* animDatabase;
+
+		LeftFootPositionFeature leftFootPositionFeature;
+
+		RightFootPositionFeature rightFootPositionFeature;
 
 		TrajectoryPositionFeature trajectoryPositionFeature;
 

@@ -331,26 +331,6 @@ namespace Animation
 				simulation_velocity_halflife,
 				20.0f * dt);
 
-			// Make query vector for search.
-			// In theory this only needs to be done when a search is 
-			// actually required however for visualization purposes it
-			// can be nice to do it every frame
-			std::vector<float> query;
-			query.resize(mm.featureArray.totalDimCount);
-
-			// Compute the features of the query vector
-			//std::vector<float> query_features = mm.matcherData;
-			int offset = 0;
-			RuntimeCharacterData rt_data;
-			rt_data.root_position = trajectory_positions[0];
-			rt_data.root_rotation = trajectory_rotations[0];
-			rt_data.trajectory_positions = trajectory_positions;
-			rt_data.trajectory_rotations = trajectory_rotations;
-
-
-			for (int i = 0; i < mm.featureArray.features.size(); i++) {
-				mm.featureArray.features[i]->EvaluateForRuntimeGuy(&query[mm.featureArray.offsets[i]], rt_data);
-			}
 			//char out[50];
 			//sprintf(out, "curr: ");
 			//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
@@ -370,6 +350,26 @@ namespace Animation
 			if (force_search ||/* search_timer <= 0.0f ||*/ end_of_anim)
 			{
 				// Search
+							// Make query vector for search.
+			// In theory this only needs to be done when a search is 
+			// actually required however for visualization purposes it
+			// can be nice to do it every frame
+				std::vector<float> query;
+				query.resize(mm.featureArray.totalDimCount);
+
+				// Compute the features of the query vector
+				//std::vector<float> query_features = mm.matcherData;
+				int offset = 0;
+				rt_data.transforms = db->GetTransformsAtPoseId(frame_index);
+				rt_data.root_position = trajectory_positions[0];
+				rt_data.root_rotation = trajectory_rotations[0];
+				rt_data.trajectory_positions = trajectory_positions;
+				rt_data.trajectory_rotations = trajectory_rotations;
+
+
+				for (int i = 0; i < mm.featureArray.features.size(); i++) {
+					mm.featureArray.features[i]->EvaluateForRuntimeGuy(&query[mm.featureArray.offsets[i]], rt_data);
+				}
 
 				mm.bestIndex = end_of_anim ? -1 : frame_index;
 				mm.bestCost = FLT_MAX;
@@ -499,5 +499,7 @@ namespace Animation
 		float max_sideways_speed = 1.0f;
 		float max_velocity_change = 0.2f;
 
+
+		RuntimeCharacterData rt_data;
 	};
 }

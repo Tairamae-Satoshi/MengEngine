@@ -56,6 +56,8 @@ namespace Animation
 
 		int GetJointParentIndex(int i) const;
 
+		const std::vector<int>& GetParentIndex() const;
+
 		std::string GetJointName(int index) const;
 
 		Matrix GetJointOffset(int index) const;

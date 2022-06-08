@@ -163,6 +163,7 @@
     <ClCompile Include="Animation\LocalToModelJob.cpp" />
     <ClCompile Include="Animation\MotionAnalyzer.cpp" />
     <ClCompile Include="Animation\Character\RootMotion.cpp" />
+    <ClCompile Include="Animation\MotionMatchingJob.cpp" />
     <ClCompile Include="Animation\SamplingJob.cpp" />
     <ClCompile Include="Animation\AnimationDatabase.cpp" />
     <ClCompile Include="Animation\Utils.cpp" />

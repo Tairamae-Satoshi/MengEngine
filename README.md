@@ -24,7 +24,7 @@ This is a skeleton animation engine. And a procedural character locomotion syste
 
   - Motion Matching
     - [x] Trajectory matching
-    - [ ] Pose matching
+    - [x] Pose matching(Only position for now)
 
 * Character Control
 
@@ -40,3 +40,4 @@ JOHANSEN, R. S. 2009. Automated Semi-Procedural Animation for Character Locomoti
 Park, S. I., Shin, H. J., and Shin, S. Y. (2002). On-line locomotion generation based on motion blending. In SCA ’02: Proceedings of the 2002 ACMSIGGRAPH/Eurographics symposium on Computer animation, pages 105–111, New York, NY, USA. ACM.
 
 David Bollo. Inertialization: High-Performance Animation Transitions in 'Gears of War', GDC 2018. 
+

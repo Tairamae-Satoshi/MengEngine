@@ -29,6 +29,8 @@ namespace Animation
 
 		matched_positions.resize(trajectory_points_size);
 
+		rt_data.parent_index = db->GetParentIndex();
+
 		// Build Motion Matching Job
 		mm.Build();
 	}

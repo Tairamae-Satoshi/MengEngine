@@ -139,6 +139,11 @@ namespace Animation
 		return mJointHierarchy[i];
 	}
 
+	const std::vector<int>& AnimationDatabase::GetParentIndex() const
+	{
+		return mJointHierarchy;
+	}
+
 	std::string AnimationDatabase::GetJointName(int index) const
 	{
 		return mJointNames[index];

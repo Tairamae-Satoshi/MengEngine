@@ -22,6 +22,10 @@ namespace Animation
 		legs[leg].knee = joints[1];
 		legs[leg].ankle = joints[2];
 		legs[leg].toe = joints[3];
+		//char out[100];
+		//sprintf(out, "-----------%d", legs[leg].ankle);
+		//Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 196, out);
+
 		return found == 4;
 	}
 
