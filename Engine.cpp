@@ -238,13 +238,13 @@ private:
 	RenderItem* pSourceRitem;
 	Vector3 source_pos = Vector3(-1.0f, 2.0f, -3.0f);
 	Vector3 pre_source_pos = Vector3(-0.0f, 1.0f, -3.0f);
-	Quaternion source_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.3f*MathHelper::Pi);
-	Quaternion pre_source_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.2f * MathHelper::Pi);
+	Quaternion source_rot = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 1.0f, 0.0f), 0.3f*MathHelper::Pi);
+	Quaternion pre_source_rot = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 1.0f, 0.0f), 0.2f * MathHelper::Pi);
 
 	// Head Aim IK
 	RenderItem* pTargetRitem;
-	Vector3 target_pos = Vector3(-1.0f, 10.0f, -3.0f);
-	Quaternion target_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), 0.8f * MathHelper::Pi);
+	Vector3 target_pos = Vector3(-1.0f, 3.0f, 6.0f);
+	Quaternion target_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 1.0f), 0.8f * MathHelper::Pi);
 
 	// Trajectory Points
 	RenderItem* pTrajectoryPointRitems[4];
@@ -996,16 +996,16 @@ void Engine::UpdateGUI()
 	if (ImGui::Begin("Panel"))
 	{
 		character.db.OnGui();
-		mController.OnGui();
-		//blender.OnGui();
-		float t[3] = { source_pos.x, source_pos.y, source_pos.z };
-		if (ImGui::InputFloat3("Target", t))
-		{
-			source_pos = Vector3(t);
-			XMStoreFloat4x4(&pSourceRitem->World, XMMatrixTranslation(source_pos.x, source_pos.y, source_pos.z));
-		}
-		ImGui::SliderFloat("Weight", &character.foot_ik_weight, 0.0f, 1.0f);
-		ImGui::SliderFloat("Soften", &character.foot_ik_soften, 0.0f, 1.0f);
+		//mController.OnGui();
+		////blender.OnGui();
+		//float t[3] = { source_pos.x, source_pos.y, source_pos.z };
+		//if (ImGui::InputFloat3("Target", t))
+		//{
+		//	source_pos = Vector3(t);
+		//	XMStoreFloat4x4(&pSourceRitem->World, XMMatrixTranslation(source_pos.x, source_pos.y, source_pos.z));
+		//}
+		//ImGui::SliderFloat("Weight", &character.foot_ik_weight, 0.0f, 1.0f);
+		//ImGui::SliderFloat("Soften", &character.foot_ik_soften, 0.0f, 1.0f);
 
 		//ImGui::Image((ImTextureID)m_ShadowMapSRV->GetGpuHandle().ptr, ImVec2(1280, 720));
 
@@ -1060,11 +1060,12 @@ void Engine::UpdateTarget(const GameTimer& gt)
 	//	std::cos(time * 0.5f + .5f));
 	//head_target = head_target_offset + animated_target * 5.0f;
 	//XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
-	if (inertialize_t < 5.0f)
+	/*float t = 1.0f;
+	if (inertialize_t < t)
 	{
 		inertialize_t += gt.DeltaTime();
-		Vector3 curr_pos = Vector3::Inertialize(pre_source_pos, source_pos, target_pos, 1.0f, 5.0f, inertialize_t);
-		Quaternion curr_rot = Quaternion::Inertialize(pre_source_rot, source_rot, target_rot, 1.0f, 5.0f, inertialize_t);
+		Vector3 curr_pos = Vector3::Inertialize(pre_source_pos, source_pos, target_pos, 1.0f, t, inertialize_t);
+		Quaternion curr_rot = Quaternion::Inertialize(pre_source_rot, source_rot, target_rot, 1.0f, t, inertialize_t);
 		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, curr_pos, curr_rot));
 		
 		float angle;
@@ -1087,7 +1088,7 @@ void Engine::UpdateTarget(const GameTimer& gt)
 		inertialize_t = 0.0f;
 		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
 	}
-	
+	*/
 
 	for (int i = 0; i < 4; i++) {
 		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
@@ -1297,9 +1298,9 @@ void Engine::LoadSkinnedModel()
 		velocities.push_back(Vector2(velocity.x, velocity.z));
 	}
 	interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
-	character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy;
-	character.character_controller.simulation_run_side_speed = interpolator->maxVx;
-	character.character_controller.simulation_run_back_speed = interpolator->maxVy;
+	character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy * 1.5f;
+	character.character_controller.simulation_run_side_speed = interpolator->maxVx * 1.5f;
+	character.character_controller.simulation_run_back_speed = interpolator->maxVy * 1.5f;
 	//character.character_controller_.simulation_run_fwrd_speed = 4.0f;
 	//character.character_controller_.simulation_run_side_speed = 3.0f;
 	//character.character_controller_.simulation_run_back_speed = 2.5f;
@@ -1424,39 +1425,39 @@ void Engine::BuildRenderItems()
 	mAllRitems.push_back(std::move(gridRitem));
 
 	//// Foot IK Target
-	auto targetRitem = std::make_unique<RenderItem>();
-	targetRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&targetRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
-	XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
-	targetRitem->ObjCBIndex = objCBIndex++;
-	targetRitem->Mat = mMaterials["tile0"].get();
-	targetRitem->Geo = mGeometries["shapeGeo"].get();
-	targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	targetRitem->IndexCount = targetRitem->Geo->DrawArgs["box"].IndexCount;
-	targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["box"].StartIndexLocation;
-	targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["box"].BaseVertexLocation;
+	//auto targetRitem = std::make_unique<RenderItem>();
+	//targetRitem->World = MathHelper::Identity4x4();
+	//XMStoreFloat4x4(&targetRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
+	//XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
+	//targetRitem->ObjCBIndex = objCBIndex++;
+	//targetRitem->Mat = mMaterials["tile0"].get();
+	//targetRitem->Geo = mGeometries["shapeGeo"].get();
+	//targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//targetRitem->IndexCount = targetRitem->Geo->DrawArgs["box"].IndexCount;
+	//targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["box"].StartIndexLocation;
+	//targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 
 
-	mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
-	pSourceRitem = targetRitem.get();
-	mAllRitems.push_back(std::move(targetRitem));
+	//mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
+	//pSourceRitem = targetRitem.get();
+	//mAllRitems.push_back(std::move(targetRitem));
 
-	//// Head IK Target
-	auto head_target_ritem = std::make_unique<RenderItem>();
-	head_target_ritem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&head_target_ritem->World, Matrix::CreateAffineTransformation(Vector3::One, target_pos, target_rot));
-	XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
-	head_target_ritem->ObjCBIndex = objCBIndex++;
-	head_target_ritem->Mat = mMaterials["tile0"].get();
-	head_target_ritem->Geo = mGeometries["shapeGeo"].get();
-	head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["box"].IndexCount;
-	head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["box"].StartIndexLocation;
-	head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["box"].BaseVertexLocation;
+	////// Head IK Target
+	//auto head_target_ritem = std::make_unique<RenderItem>();
+	//head_target_ritem->World = MathHelper::Identity4x4();
+	//XMStoreFloat4x4(&head_target_ritem->World, Matrix::CreateAffineTransformation(Vector3::One, target_pos, target_rot));
+	//XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
+	//head_target_ritem->ObjCBIndex = objCBIndex++;
+	//head_target_ritem->Mat = mMaterials["tile0"].get();
+	//head_target_ritem->Geo = mGeometries["shapeGeo"].get();
+	//head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["box"].IndexCount;
+	//head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["box"].StartIndexLocation;
+	//head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["box"].BaseVertexLocation;
 
-	mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
-	pTargetRitem = head_target_ritem.get();
-	mAllRitems.push_back(std::move(head_target_ritem));
+	//mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
+	//pTargetRitem = head_target_ritem.get();
+	//mAllRitems.push_back(std::move(head_target_ritem));
 	
 	// Trajectory
 	for (int i = 0; i < 4; i++) {
