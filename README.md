@@ -6,30 +6,25 @@ This is a skeleton animation engine. And a procedural character locomotion syste
 
 #### Features:
 
-* High-level Animation
+* Basic Animation Feature
+  * Skeleton Animation
+  * Animation sampling
+  * Animation blending
+    - linear blending
+    - Inertialization
 
-  - [x] Animation sampling
-  - Animation blending
-    - [x] linear blending
-    - [x] Inertialize
-    - [ ] Partial animation blending
-    - [ ] Additive blending
-
-  - [x] Linear skinning
-  - [x] Motion analysis
-
-  - IK
-    - [x] Two bone IK
-    - [x] Aim IK
-
-  - Motion Matching
-    - [x] Trajectory matching
-    - [x] Pose matching(Only position for now)
-
-* Character Control
-
-  - [ ] Root Motion
-  - [x] Spring Damper
+  * Linear skinning
+* Advanced Animation Features
+  * Blendspace
+    * Motion analysis (used to align the key time)
+    * Gradient band interpolation
+  * Motion Matching
+    * Spring Controller
+    * Trajectory matching
+    * Pose matching(Only position for now)
+  * IK Rigging
+    * Two bone IK
+    * Aim IK
 
 
 
