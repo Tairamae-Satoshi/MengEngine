@@ -107,7 +107,7 @@ void FBXLoader::InitMesh(UINT MeshIndex,
 	}
 }
 
-bool FBXLoader::LoadFBX(const std::string& filename,
+bool FBXLoader::LoadBindPose(const std::string& filename,
 	std::vector<Animation::SkinnedVertex>& vertices,
 	std::vector<USHORT>& indices,
 	std::vector<Subset>& subsets,
@@ -115,7 +115,7 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 	AnimationDatabase& db)
 {
 	Assimp::Importer importer;
-
+	
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
@@ -133,9 +133,27 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 	CreateSkeletonHierachy(pScene);
 	InitFromScene(pScene, filename, subsets, vertices, indices, mats);
 	jointOffsets = ReorganizeBoneOffsets(pScene);
-	ReadAnimationClips(filename, pScene);
-	db.Set(jointIndexToParentIndex, nodeIndexToName,jointOffsets, vertices, animations);
+	LoadBP(pScene);
+	//ReadAnimationClips(filename, pScene);
+	db.Set(jointIndexToParentIndex, nodeIndexToName,jointOffsets, vertices, bind_pose);
 	
+	return true;
+}
+
+bool FBXLoader::LoadBP(const aiScene* pScene)
+{
+	for (size_t i = 0; i < nodeIndexToName.size(); i++)
+	{
+		std::string name = nodeIndexToName[i];
+		Matrix m(&(pScene->mRootNode->FindNode(aiString(name))->mTransformation.a1));
+
+		Transform transform;
+
+		m.Transpose().Decompose(transform.mScale.mValue, transform.mRot.mValue, transform.mTrans.mValue);
+
+		bind_pose.push_back(transform);
+	}
+
 	return true;
 }
 
@@ -151,7 +169,6 @@ bool FBXLoader::LoadFBXClip(const std::string& filename, AnimationDatabase& db)
 {
 	Assimp::Importer importer;
 
-	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
 		aiProcess_ConvertToLeftHanded
@@ -267,7 +284,7 @@ void FBXLoader::LoadBones(UINT MeshIndex,
 			aiMatrix4x4 aiOffsetMatrix = pMesh->mBones[i]->mOffsetMatrix;
 			// need to transpose
 			aiOffsetMatrix.Transpose();
-			XMFLOAT4X4 OffsetMatrix(&aiOffsetMatrix.a1);
+			Matrix OffsetMatrix(&aiOffsetMatrix.a1);
 			jointOffsets.push_back(OffsetMatrix);
 			m_BoneMapping[BoneName] = BoneIndex;
 		}
@@ -295,9 +312,9 @@ void FBXLoader::LoadBones(UINT MeshIndex,
 	}
 }
 
-std::vector<XMFLOAT4X4> FBXLoader::ReorganizeBoneOffsets(const aiScene* pScene)
+std::vector<Matrix> FBXLoader::ReorganizeBoneOffsets(const aiScene* pScene)
 {
-	std::vector<XMFLOAT4X4> newBoneOffsets;
+	std::vector<Matrix> newBoneOffsets;
 	newBoneOffsets.resize(jointOffsets.size());
 	for (UINT i = 0; i < jointIndexToParentIndex.size(); i++)
 	{
@@ -314,6 +331,7 @@ void FBXLoader::ReadAnimationClips(const std::string& path, const aiScene* pScen
 	char out[100];
 
 	aiAnimation** aiAnimationClips = pScene->mAnimations;
+	
 	for (UINT i = 0; i < pScene->mNumAnimations; i++)
 	{
 		aiAnimation* aiAnimationClip = aiAnimationClips[i];
@@ -331,6 +349,9 @@ void FBXLoader::ReadAnimationClips(const std::string& path, const aiScene* pScen
 				UINT index = it - nodeIndexToName.begin();
 				ReadBoneKeyframes(pNodeAnim, animationClip.mSamples[index]);
 			}
+			sprintf(out, "index: %d", aiAnimationClip->mNumChannels);
+			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "FindSwingChangeTime", "MotionAnalyzer", 256, boneName);
+
 		}
 
 		std::string fileName = GetFileName(path);
@@ -374,6 +395,7 @@ void FBXLoader::ReadBoneKeyframes(aiNodeAnim* nodeAnim, BoneAnimationSample& bon
 void FBXLoader::CreateSkeletonHierachy(const aiScene* scene)
 {
 	aiNode* rootNode = scene->mRootNode;
+	
 	BuildNodeMappingWithBone(rootNode, scene);
 	SetNodeMappingWithBone(rootNode, scene);
 	CreateSkeletonHierachyWithNecessityMap(rootNode, -1);

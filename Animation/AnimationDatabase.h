@@ -32,9 +32,10 @@ namespace Animation
 		void Set(
 			std::vector<int>& jointHierarchy,
 			std::vector<std::string>& jointNames,
-			std::vector<DirectX::XMFLOAT4X4>& jointOffsets,
+			std::vector<Matrix>& jointOffsets,
 			std::vector<SkinnedVertex> vertices,
-			std::unordered_map<std::string, AnimationClip>& animations);
+			std::vector<Transform> binepose
+			/*std::unordered_map<std::string, AnimationClip>& animations*/);
 
 		//void SetBindPose(const AnimationClip* bindPose);
 
@@ -62,7 +63,7 @@ namespace Animation
 
 		Matrix GetJointOffset(int index) const;
 
-		const AnimationClip* GetBindPose() const;
+		const std::vector<Transform>& GetBindPose() const;
 
 		const std::vector<SkinnedVertex>& GetVertices() const;
 
@@ -87,9 +88,9 @@ namespace Animation
 
 		std::vector<std::string> mJointNames;
 
-		std::vector<DirectX::XMFLOAT4X4> mJointOffsets;
+		std::vector<Matrix> mJointOffsets;
 
-		AnimationClip mBindPose;
+		std::vector<Transform> mBindPose;
 
 		std::vector<SkinnedVertex> mVertices;
 

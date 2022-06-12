@@ -36,17 +36,9 @@ namespace Animation
 			return false;
 		}
 
-		SamplingJob samplingJob;
-		samplingJob.animation = skeleton->GetBindPose();
-		samplingJob.ratio = 0.0f;
-		if (!samplingJob.Run())
-		{
-			// return false;
-		}
-
 		LocalToModelJob ltmJob;
 		ltmJob.skeleton = skeleton;
-		ltmJob.input = samplingJob.output;
+		ltmJob.input = skeleton->GetBindPose();
 		if (!ltmJob.Run(true, true))
 		{
 			// return false;
@@ -54,7 +46,7 @@ namespace Animation
 
 		LocalToModelJob ltmJobWithoutOffset;
 		ltmJobWithoutOffset.skeleton = skeleton;
-		ltmJobWithoutOffset.input = samplingJob.output;
+		ltmJobWithoutOffset.input = skeleton->GetBindPose();
 		if (!ltmJobWithoutOffset.Run(true, false))
 		{
 			// return false;

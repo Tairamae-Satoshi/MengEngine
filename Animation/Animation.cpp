@@ -244,7 +244,19 @@ namespace Animation
 
 		for (size_t i = 0; i < mSamples.size(); i++)
 		{
-			transforms.push_back(mSamples[i].mLocalPose[tick]);
+			//transforms.push_back(mSamples[i].mLocalPose[tick]);
+
+			if (!mSamples[i].mLocalPose.empty())
+			{
+				transforms.push_back(mSamples[i].mLocalPose[tick]);
+			}
+			else
+			{
+				Transform t;
+				t.mScale.mValue = Vector3::One;
+
+				transforms.push_back(t);
+			}
 		}
 
 		return transforms;

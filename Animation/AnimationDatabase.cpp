@@ -35,15 +35,16 @@ namespace Animation
 	
 	void AnimationDatabase::Set(std::vector<int>& jointHierarchy,
 		std::vector<std::string>& jointNames,
-		std::vector<XMFLOAT4X4>& jointOffsets,
+		std::vector<Matrix>& jointOffsets,
 		std::vector<SkinnedVertex> vertices,
-		std::unordered_map<std::string, AnimationClip>& animations)
+		std::vector<Transform> binepose
+		/*std::unordered_map<std::string, AnimationClip>& animations*/)
 	{
 		mJointHierarchy = jointHierarchy;
 		mJointNames = jointNames;
 		mJointOffsets = jointOffsets;
 		mVertices = vertices;
-		mBindPose = animations.begin()->second;
+		mBindPose = binepose;
 	}
 
 	//void AnimationDatabase::SetBindPose(const AnimationClip* bindPose)
@@ -154,9 +155,9 @@ namespace Animation
 		return mJointOffsets[index];
 	}
 
-	const AnimationClip* AnimationDatabase::GetBindPose() const
+	const std::vector<Transform>& AnimationDatabase::GetBindPose() const
 	{
-		return &mBindPose;
+		return mBindPose;
 	}
 
 	const std::vector<SkinnedVertex>& AnimationDatabase::GetVertices() const

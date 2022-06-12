@@ -232,23 +232,9 @@ private:
 	PlaybackController mController;
 	Character character;
 
-	// Two Bone IK
-	float inertialize_t = 0.0f;
-
-	RenderItem* pSourceRitem;
-	Vector3 source_pos = Vector3(-1.0f, 2.0f, -3.0f);
-	Vector3 pre_source_pos = Vector3(-0.0f, 1.0f, -3.0f);
-	Quaternion source_rot = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 1.0f, 0.0f), 0.3f*MathHelper::Pi);
-	Quaternion pre_source_rot = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 1.0f, 0.0f), 0.2f * MathHelper::Pi);
-
-	// Head Aim IK
-	RenderItem* pTargetRitem;
-	Vector3 target_pos = Vector3(-1.0f, 3.0f, 6.0f);
-	Quaternion target_rot = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 1.0f), 0.8f * MathHelper::Pi);
-
 	// Trajectory Points
-	RenderItem* pTrajectoryPointRitems[4];
-	RenderItem* pMatchedPointRitems[4];
+	//RenderItem* pTrajectoryPointRitems[4];
+	//RenderItem* pMatchedPointRitems[4];
 
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
@@ -811,24 +797,6 @@ void Engine::OnKeyboardInput(const GameTimer& gt)
 	if(GetAsyncKeyState('D') & 0x8000)
 		mCamera.Strafe(10.0f*dt);
 
-
-	// Character Control
-	//if (GetAsyncKeyState(VK_UP) & 0x8000)
-	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, -1.0f), gt.DeltaTime());
-	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, 1.0f);
-	//else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
-	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, 1.0f), gt.DeltaTime());
-	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, -1.0f);
-	//else if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-	//	//character.character_controller_.Update(Vector3(-1.0f, 0.0f, 0.0f), gt.DeltaTime());
-	//	character.character_controller_.gamepadstick_left = Vector3(-1.0f, 0.0f, 0.0f);
-	//else if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
-	//	//character.character_controller_.Update(Vector3(1.0f, 0.0f, 0.0f), gt.DeltaTime());
-	//	character.character_controller_.gamepadstick_left = Vector3(1.0f, 0.0f, 0.0f);
-	//else
-	//	//character.character_controller_.Update(Vector3(0.0f, 0.0f, 0.0f), gt.DeltaTime());
-	//	character.character_controller_.gamepadstick_left = Vector3(0.0f, 0.0f, 0.0f);
-
 	// TODO
 	if (GetAsyncKeyState(' ') & 0x8000)
 	{
@@ -853,8 +821,8 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 	mController.Update(blender.GetDuration(), gt.DeltaTime());
 
 	//blender.t = mController.GetTimeRatio();
-	blender.deltaT = mController.GetDeltaTime();
-	character.UpdateController(gt.DeltaTime());
+	//blender.deltaT = mController.GetDeltaTime();
+	//character.UpdateController(gt.DeltaTime());
 	//character.UpdateBlendingMotion(blender);
 	character.UpdateFinalModelTransform();
 
@@ -996,7 +964,7 @@ void Engine::UpdateGUI()
 	if (ImGui::Begin("Panel"))
 	{
 		character.db.OnGui();
-		//mController.OnGui();
+		mController.OnGui();
 		////blender.OnGui();
 		//float t[3] = { source_pos.x, source_pos.y, source_pos.z };
 		//if (ImGui::InputFloat3("Target", t))
@@ -1054,55 +1022,20 @@ void Engine::UpdateGUI()
 
 void Engine::UpdateTarget(const GameTimer& gt)
 {
-	//float time = gt.TotalTime();
-	//Vector3 animated_target(std::sin(time * 0.5f),
-	//	std::cos(time * 0.25f) * 0.5,
-	//	std::cos(time * 0.5f + .5f));
-	//head_target = head_target_offset + animated_target * 5.0f;
-	//XMStoreFloat4x4(&pHeadAimTargetRitem->World, XMMatrixTranslation(5, 10, 10));
-	/*float t = 1.0f;
-	if (inertialize_t < t)
-	{
-		inertialize_t += gt.DeltaTime();
-		Vector3 curr_pos = Vector3::Inertialize(pre_source_pos, source_pos, target_pos, 1.0f, t, inertialize_t);
-		Quaternion curr_rot = Quaternion::Inertialize(pre_source_rot, source_rot, target_rot, 1.0f, t, inertialize_t);
-		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, curr_pos, curr_rot));
-		
-		float angle;
-		Vector3 axis;
-		curr_rot.GetAxisAngle(axis, angle);
-		char out[200];
-		sprintf(out, "angle = %f, axis = (%f, %f, %f)", angle/MathHelper::Pi, axis.x, axis.y, axis.z);
-		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1072, out);
 
-	}
-	else
-	{
-		float angle;
-		Vector3 axis;
-		source_rot.GetAxisAngle(axis, angle);
-		char out[200];
-		sprintf(out, "\n\n\n\nangle = %f, axis = (%f, %f, %f)", angle/MathHelper::Pi, axis.x, axis.y, axis.z);
-		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 1072, out);
+	//for (int i = 0; i < 4; i++) {
+	//	XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
+	//		character.character_controller.trajectory_positions[i].x * 0.05f,
+	//		0.0f,
+	//		character.character_controller.trajectory_positions[i].z * 0.05f));
+	//}
 
-		inertialize_t = 0.0f;
-		XMStoreFloat4x4(&pSourceRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
-	}
-	*/
-
-	for (int i = 0; i < 4; i++) {
-		XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
-			character.character_controller.trajectory_positions[i].x * 0.05f,
-			0.0f,
-			character.character_controller.trajectory_positions[i].z * 0.05f));
-	}
-
-	for (int i = 0; i < 4; i++) {
-		XMStoreFloat4x4(&pMatchedPointRitems[i]->World, XMMatrixTranslation(
-			character.character_controller.matched_positions[i].x * 0.05f,
-			0.0f,
-			character.character_controller.matched_positions[i].z * 0.05f));
-	}
+	//for (int i = 0; i < 4; i++) {
+	//	XMStoreFloat4x4(&pMatchedPointRitems[i]->World, XMMatrixTranslation(
+	//		character.character_controller.matched_positions[i].x * 0.05f,
+	//		0.0f,
+	//		character.character_controller.matched_positions[i].z * 0.05f));
+	//}
 }
 
 
@@ -1263,80 +1196,80 @@ void Engine::LoadSkinnedModel()
 
 
 	FBXLoader fbxLoader;
-	fbxLoader.LoadFBX(bind_pose_filename, vertices, indices,
+	fbxLoader.LoadBindPose(bind_pose_filename, vertices, indices,
 		mSkinnedSubsets, mSkinnedMats, character.db);
 	
-	for (int i = 0; i < animation_num; ++i) {
+	/*for (int i = 0; i < animation_num; ++i) {
 		fbxLoader.LoadFBXClip(mAnimationFilename[i], character.db);
-	}
+	}*/
 
-	character.db.convert_to_fps(60.0f);
+	//character.db.convert_to_fps(60.0f);
 
-	for (int i = 0; i < animation_num; ++i)
-	{
-		std::string clipName = character.db.GetAnimationClipName(i);
-		mSamplers[i] = character.db.GetAnimationClipByName(clipName);
-		Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 794, clipName);
-	}
+	//for (int i = 0; i < animation_num; ++i)
+	//{
+	//	std::string clipName = character.db.GetAnimationClipName(i);
+	//	mSamplers[i] = character.db.GetAnimationClipByName(clipName);
+	//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 794, clipName);
+	//}
 
-	character.Initialize();
+	//character.Initialize();
 
 	// Initialize analyzer
-	for (int i = 0; i < animation_num; ++i)
-	{
-		analyzer[i].legC = &character.leg_controller;
-		analyzer[i].animation = mSamplers[i];
-		analyzer[i].Analyze();
-	}
+	//for (int i = 0; i < animation_num; ++i)
+	//{
+	//	analyzer[i].legC = &character.leg_controller;
+	//	analyzer[i].animation = mSamplers[i];
+	//	analyzer[i].Analyze();
+	//}
 
-	// Prepare gradient band interpolator
-	std::vector<Vector2> velocities;
-	for (size_t i = 0; i < animation_num; ++i)
-	{
-		Vector3 velocity = analyzer[i].mCycleSpeed * analyzer[i].mCycleDirection;
-		if (i == 0) velocity = Vector3::Zero;
-		velocities.push_back(Vector2(velocity.x, velocity.z));
-	}
-	interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
-	character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy * 1.5f;
-	character.character_controller.simulation_run_side_speed = interpolator->maxVx * 1.5f;
-	character.character_controller.simulation_run_back_speed = interpolator->maxVy * 1.5f;
-	//character.character_controller_.simulation_run_fwrd_speed = 4.0f;
-	//character.character_controller_.simulation_run_side_speed = 3.0f;
-	//character.character_controller_.simulation_run_back_speed = 2.5f;
+	//// Prepare gradient band interpolator
+	//std::vector<Vector2> velocities;
+	//for (size_t i = 0; i < animation_num; ++i)
+	//{
+	//	Vector3 velocity = analyzer[i].mCycleSpeed * analyzer[i].mCycleDirection;
+	//	if (i == 0) velocity = Vector3::Zero;
+	//	velocities.push_back(Vector2(velocity.x, velocity.z));
+	//}
+	//interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
+	//character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy * 1.5f;
+	//character.character_controller.simulation_run_side_speed = interpolator->maxVx * 1.5f;
+	//character.character_controller.simulation_run_back_speed = interpolator->maxVy * 1.5f;
+	////character.character_controller_.simulation_run_fwrd_speed = 4.0f;
+	////character.character_controller_.simulation_run_side_speed = 3.0f;
+	////character.character_controller_.simulation_run_back_speed = 2.5f;
 
-	// Calculate weight
-	std::vector<float> weights = interpolator->Interpolate(Vector2(0.0, 0.0));
-	//std::vector<float> weights = interpolator->Interpolate(Vector2(velocities[0].x, velocities[0].y));
+	//// Calculate weight
+	//std::vector<float> weights = interpolator->Interpolate(Vector2(0.0, 0.0));
+	////std::vector<float> weights = interpolator->Interpolate(Vector2(velocities[0].x, velocities[0].y));
 
-	// Prepares blending layers
-	std::vector<BlendingJob::Layer> layers;
-	for (size_t i = 0; i < animation_num; i++)
-	{
-		BlendingJob::Layer layer;
-		layer.weight = weights[i];
-		layer.t = 0.0f;
-		layer.animation = analyzer[i].animation;
-		layer.Nk = 4;
-		layer.K[0] = 0.0f * analyzer[i].animation->get_duration_in_second();
-		layer.K[1] = analyzer[i].cycles[0].postliftTime * analyzer[i].animation->get_duration_in_second();
-		layer.K[2] = analyzer[i].cycles[1].postliftTime * analyzer[i].animation->get_duration_in_second();
-		layer.K[3] = 1.0f * analyzer[i].animation->get_duration_in_second();
-		qsort(layer.K,
-			layer.Nk,
-			sizeof(float),
-			[](const void* x, const void* y) {
-				return *(int*)x - *(int*)y;
-			});
-		layers.push_back(layer);
-	}
+	//// Prepares blending layers
+	//std::vector<BlendingJob::Layer> layers;
+	//for (size_t i = 0; i < animation_num; i++)
+	//{
+	//	BlendingJob::Layer layer;
+	//	layer.weight = weights[i];
+	//	layer.t = 0.0f;
+	//	layer.animation = analyzer[i].animation;
+	//	layer.Nk = 4;
+	//	layer.K[0] = 0.0f * analyzer[i].animation->get_duration_in_second();
+	//	layer.K[1] = analyzer[i].cycles[0].postliftTime * analyzer[i].animation->get_duration_in_second();
+	//	layer.K[2] = analyzer[i].cycles[1].postliftTime * analyzer[i].animation->get_duration_in_second();
+	//	layer.K[3] = 1.0f * analyzer[i].animation->get_duration_in_second();
+	//	qsort(layer.K,
+	//		layer.Nk,
+	//		sizeof(float),
+	//		[](const void* x, const void* y) {
+	//			return *(int*)x - *(int*)y;
+	//		});
+	//	layers.push_back(layer);
+	//}
 
-	// Prepares playback controller
+	//// Prepares playback controller
 	mController.SetTimeRatio(0.0f);
 
-	// Setups blending job
-	blender.layers = layers;
-	blender.interpolator = interpolator;
+	//// Setups blending job
+	//blender.layers = layers;
+	//blender.interpolator = interpolator;
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
     const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
@@ -1460,46 +1393,46 @@ void Engine::BuildRenderItems()
 	//mAllRitems.push_back(std::move(head_target_ritem));
 	
 	// Trajectory
-	for (int i = 0; i < 4; i++) {
-		auto trajectoryPointRitem = std::make_unique<RenderItem>();
-		trajectoryPointRitem->World = MathHelper::Identity4x4();
-		XMStoreFloat4x4(&trajectoryPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-		XMStoreFloat4x4(&trajectoryPointRitem->TexTransform, Matrix::Identity);
-		trajectoryPointRitem->ObjCBIndex = objCBIndex++;
-		trajectoryPointRitem->Mat = mMaterials["tile0"].get();
-		trajectoryPointRitem->Geo = mGeometries["shapeGeo"].get();
-		trajectoryPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		trajectoryPointRitem->IndexCount = trajectoryPointRitem->Geo->DrawArgs["sphere"].IndexCount;
-		trajectoryPointRitem->StartIndexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-		trajectoryPointRitem->BaseVertexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-		trajectoryPointRitem->Color = Colors::Yellow;
+	//for (int i = 0; i < 4; i++) {
+	//	auto trajectoryPointRitem = std::make_unique<RenderItem>();
+	//	trajectoryPointRitem->World = MathHelper::Identity4x4();
+	//	XMStoreFloat4x4(&trajectoryPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+	//	XMStoreFloat4x4(&trajectoryPointRitem->TexTransform, Matrix::Identity);
+	//	trajectoryPointRitem->ObjCBIndex = objCBIndex++;
+	//	trajectoryPointRitem->Mat = mMaterials["tile0"].get();
+	//	trajectoryPointRitem->Geo = mGeometries["shapeGeo"].get();
+	//	trajectoryPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//	trajectoryPointRitem->IndexCount = trajectoryPointRitem->Geo->DrawArgs["sphere"].IndexCount;
+	//	trajectoryPointRitem->StartIndexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	//	trajectoryPointRitem->BaseVertexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	//	trajectoryPointRitem->Color = Colors::Yellow;
 
-		mRitemLayer[(int)RenderLayer::Opaque].push_back(trajectoryPointRitem.get());
-		pTrajectoryPointRitems[i] = trajectoryPointRitem.get();
-		mAllRitems.push_back(std::move(trajectoryPointRitem));
+	//	mRitemLayer[(int)RenderLayer::Opaque].push_back(trajectoryPointRitem.get());
+	//	pTrajectoryPointRitems[i] = trajectoryPointRitem.get();
+	//	mAllRitems.push_back(std::move(trajectoryPointRitem));
 
-	}
+	//}
 
-	// Matched
-	for (int i = 0; i < 4; i++) {
-		auto matchedPointRitem = std::make_unique<RenderItem>();
-		matchedPointRitem->World = MathHelper::Identity4x4();
-		XMStoreFloat4x4(&matchedPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-		XMStoreFloat4x4(&matchedPointRitem->TexTransform, Matrix::Identity);
-		matchedPointRitem->ObjCBIndex = objCBIndex++;
-		matchedPointRitem->Mat = mMaterials["tile0"].get();
-		matchedPointRitem->Geo = mGeometries["shapeGeo"].get();
-		matchedPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		matchedPointRitem->IndexCount = matchedPointRitem->Geo->DrawArgs["sphere"].IndexCount;
-		matchedPointRitem->StartIndexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-		matchedPointRitem->BaseVertexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-		matchedPointRitem->Color = Colors::LightGreen;
+	//// Matched
+	//for (int i = 0; i < 4; i++) {
+	//	auto matchedPointRitem = std::make_unique<RenderItem>();
+	//	matchedPointRitem->World = MathHelper::Identity4x4();
+	//	XMStoreFloat4x4(&matchedPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+	//	XMStoreFloat4x4(&matchedPointRitem->TexTransform, Matrix::Identity);
+	//	matchedPointRitem->ObjCBIndex = objCBIndex++;
+	//	matchedPointRitem->Mat = mMaterials["tile0"].get();
+	//	matchedPointRitem->Geo = mGeometries["shapeGeo"].get();
+	//	matchedPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//	matchedPointRitem->IndexCount = matchedPointRitem->Geo->DrawArgs["sphere"].IndexCount;
+	//	matchedPointRitem->StartIndexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	//	matchedPointRitem->BaseVertexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	//	matchedPointRitem->Color = Colors::LightGreen;
 
-		mRitemLayer[(int)RenderLayer::Opaque].push_back(matchedPointRitem.get());
-		pMatchedPointRitems[i] = matchedPointRitem.get();
-		mAllRitems.push_back(std::move(matchedPointRitem));
+	//	mRitemLayer[(int)RenderLayer::Opaque].push_back(matchedPointRitem.get());
+	//	pMatchedPointRitems[i] = matchedPointRitem.get();
+	//	mAllRitems.push_back(std::move(matchedPointRitem));
 
-	}
+	//}
 
 	if (mGeometries[mSkeletonName]!=NULL)
 	{

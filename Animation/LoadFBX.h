@@ -52,20 +52,24 @@ public:
 		std::vector<Subset>& subsets,
 		std::vector<FbxMaterial>& mats);
 
-	bool LoadFBX(const std::string& filename,
+	bool LoadBindPose(const std::string& filename,
 		std::vector<Animation::SkinnedVertex>& vertices,
 		std::vector<USHORT>& indices,
 		std::vector<Subset>& subsets,
 		std::vector<FbxMaterial>& mats,
 		AnimationDatabase& skeleton);
 
+	bool LoadBP(const aiScene* pScene);
+
 	bool LoadFBXClip(const std::string& filename, AnimationDatabase& skeleton);
 
 private:
-	std::vector<DirectX::XMFLOAT4X4> jointOffsets;
+	std::vector<Matrix> jointOffsets;
 	std::vector<int> jointIndexToParentIndex;
 	std::vector<std::string> nodeIndexToName;// <NodeIndex, NodeName>
 	std::unordered_map<std::string, AnimationClip> animations;
+	std::vector<Transform> bind_pose;
+
 
 	UINT m_NumBones = 0;
 	std::map<std::string, UINT> m_BoneMapping;
@@ -100,7 +104,7 @@ private:
 		std::vector<Animation::SkinnedVertex>& vertices,
 		std::vector<USHORT>& indices);
 	void InitMaterials(std::vector<FbxMaterial>& mats, const aiScene* pScene);
-	std::vector<DirectX::XMFLOAT4X4> ReorganizeBoneOffsets(const aiScene* pScene);
+	std::vector<Matrix> ReorganizeBoneOffsets(const aiScene* pScene);
 
 	// Create Skeleton Hierachy
 	void CreateSkeletonHierachy(const aiScene* scene);

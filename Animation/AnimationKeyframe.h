@@ -15,7 +15,7 @@ struct VectorKey
 
 struct QuatKey
 {
-	DirectX::SimpleMath::Quaternion mValue = DirectX::SimpleMath::Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
+	DirectX::SimpleMath::Quaternion mValue = DirectX::SimpleMath::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 
 	float mTimeTick = 0.0f;
 };

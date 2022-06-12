@@ -35,6 +35,7 @@ namespace Animation
 	{
 		LocalToModelJob ltm_job;
 		ltm_job.skeleton = &db;
+		locals = db.GetBindPose();
 		ltm_job.input = locals;
 		if (!ltm_job.Run(true, true)) {
 			//return false;
