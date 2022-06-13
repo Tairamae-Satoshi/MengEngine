@@ -59,7 +59,7 @@ public:
 		std::vector<FbxMaterial>& mats,
 		AnimationDatabase& skeleton);
 
-	bool LoadBP(const aiScene* pScene);
+	bool GetBindPose(const aiScene* pScene);
 
 	bool LoadFBXClip(const std::string& filename, AnimationDatabase& skeleton);
 

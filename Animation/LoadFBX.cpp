@@ -10,6 +10,7 @@ bool FBXLoader::LoadFBX(const std::string& filename,
 	std::vector<FbxMaterial>& mats)
 {
 	Assimp::Importer importer;
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
@@ -115,7 +116,8 @@ bool FBXLoader::LoadBindPose(const std::string& filename,
 	AnimationDatabase& db)
 {
 	Assimp::Importer importer;
-	
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+
 	// FIXUP: why not clock wise?
 	const aiScene* pScene = importer.ReadFile(filename,
 		aiProcessPreset_TargetRealtime_Fast |
@@ -133,14 +135,14 @@ bool FBXLoader::LoadBindPose(const std::string& filename,
 	CreateSkeletonHierachy(pScene);
 	InitFromScene(pScene, filename, subsets, vertices, indices, mats);
 	jointOffsets = ReorganizeBoneOffsets(pScene);
-	LoadBP(pScene);
+	GetBindPose(pScene);
 	//ReadAnimationClips(filename, pScene);
 	db.Set(jointIndexToParentIndex, nodeIndexToName,jointOffsets, vertices, bind_pose);
 	
 	return true;
 }
 
-bool FBXLoader::LoadBP(const aiScene* pScene)
+bool FBXLoader::GetBindPose(const aiScene* pScene)
 {
 	for (size_t i = 0; i < nodeIndexToName.size(); i++)
 	{
@@ -282,6 +284,10 @@ void FBXLoader::LoadBones(UINT MeshIndex,
 			BoneIndex = m_NumBones++;
 			// Bone Info
 			aiMatrix4x4 aiOffsetMatrix = pMesh->mBones[i]->mOffsetMatrix;
+			char out[100];
+			//sprintf(out, "index: %s", aiAnimationClip->mNumChannels);
+			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "FindSwingChangeTime", "MotionAnalyzer", 256, pMesh->mBones[i]->mName.C_Str());
+
 			// need to transpose
 			aiOffsetMatrix.Transpose();
 			Matrix OffsetMatrix(&aiOffsetMatrix.a1);
@@ -395,7 +401,7 @@ void FBXLoader::ReadBoneKeyframes(aiNodeAnim* nodeAnim, BoneAnimationSample& bon
 void FBXLoader::CreateSkeletonHierachy(const aiScene* scene)
 {
 	aiNode* rootNode = scene->mRootNode;
-	
+
 	BuildNodeMappingWithBone(rootNode, scene);
 	SetNodeMappingWithBone(rootNode, scene);
 	CreateSkeletonHierachyWithNecessityMap(rootNode, -1);
@@ -404,7 +410,8 @@ void FBXLoader::CreateSkeletonHierachy(const aiScene* scene)
 void FBXLoader::BuildNodeMappingWithBone(aiNode* node, const aiScene* scene)
 {
 	necessityMap[node->mName.data] = false;
-	
+	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "BuildNodeMappingWithBone", "MotionAnalyzer", 411, node->mName.data);
+
 	for (UINT i = 0; i < node->mNumChildren; i++)
 	{
 		this->BuildNodeMappingWithBone(node->mChildren[i], scene);

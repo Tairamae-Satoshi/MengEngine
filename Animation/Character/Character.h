@@ -3,6 +3,7 @@
 #include "../Animation/LegController.h"
 #include "../Animation/IKAimJob.h"
 #include "../Animation/IKTwoBoneJob.h"
+#include "..//..//Renderer/RenderItem.h"
 #include "RootMotion.h"
 #include "CharacterController.h"
 
@@ -13,7 +14,11 @@ namespace Animation
 	public:
 		Character();
 
-		//Transform transform;
+		Transform transform;
+
+		RenderItem* ri;
+
+		std::string name;
 
 		// TOFIX: Find why the model flips
 		Matrix scale = XMMatrixScaling(0.05f, 0.05f, 0.05f) /** XMMatrixRotationY(MathHelper::Pi)*/;

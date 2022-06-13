@@ -270,6 +270,7 @@
     <ClInclude Include="Common\Singleton.hpp" />
     <ClInclude Include="Common\stb_image.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="Renderer\RenderItem.h" />
     <ClInclude Include="Vendor\GUI\imconfig.h" />
     <ClInclude Include="Vendor\GUI\imgui.h" />
     <ClInclude Include="Vendor\GUI\imgui_impl_dx12.h" />

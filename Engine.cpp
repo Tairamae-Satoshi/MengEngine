@@ -11,6 +11,7 @@
 #include "Renderer/FrameResource.h"
 #include "Renderer/Material.h"
 #include "Renderer/ResourceManager.h"
+#include "Renderer/RenderItem.h"
 #include "Animation/LoadFBX.h"
 #include "Animation/Utils.h"
 #include "Animation/GradientBandInterpolator.h"
@@ -21,45 +22,6 @@
 #include "DirectXTex/DirectXTex/DirectXTex.h"
 
 using namespace Animation;
-
-
-// Lightweight structure stores parameters to draw a shape.  This will
-// vary from app-to-app.
-struct RenderItem
-{
-	RenderItem() = default;
-	RenderItem(const RenderItem& rhs) = delete;
-
-	// World matrix of the shape that describes the object's local space
-	// relative to the world space, which defines the position, orientation,
-	// and scale of the object in the world.
-	Matrix World = MathHelper::Identity4x4();
-
-	Matrix TexTransform = MathHelper::Identity4x4();
-
-	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
-	UINT ObjCBIndex = -1;
-
-	Material* Mat = nullptr;
-	MeshGeometry* Geo = nullptr;
-
-	// Primitive topology.
-	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-	// DrawIndexedInstanced parameters.
-	UINT IndexCount = 0;
-	UINT StartIndexLocation = 0;
-	int BaseVertexLocation = 0;
-
-	// Only applicable to skinned render-items.
-	UINT SkinnedCBIndex = -1;
-
-	// nullptr if this render-item is not animated by skinned mesh.
-	const AnimationClip* SkinnedModelInst = nullptr;
-
-	Vector4 Color = Vector4::One;
-	//PBRMaterialConstants* materialCB = nullptr;
-};
 
 enum class RenderLayer : int
 {
@@ -99,11 +61,12 @@ private:
 	void UpdateShadowPerPassCB(const GameTimer& gt);
 
     void BuildShapeGeometry();
-	void LoadSkinnedModel();
+	void LoadSourceModel();
+	void LoadTargetModel();
     void BuildMaterials();
     void BuildRenderItems();
 	void BuildGUI();
-    void DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphics::PipelineState* pipelineState,Graphics::GpuDynamicBuffer* perDrawCB,const std::vector<RenderItem*>& ritems, bool useMaterial = true);
+    void DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphics::PipelineState* pipelineState,Graphics::GpuDynamicBuffer* perDrawCB, Graphics::GpuDynamicBuffer* perSkinnedCB, const std::vector<RenderItem*>& ritems, bool useMaterial = true);
 
 private:
 	// Main Pass
@@ -177,28 +140,18 @@ private:
     PassConstants mMainPassCB;  // index 0 of pass cbuffer.
     PassConstants mShadowPassCB;// index 1 of pass cbuffer.
 	LightConstants mLightConstants;
-	SkinnedConstants mSkinnedConstants;
+	//SkinnedConstants mSkinnedConstants;
 	PBRMaterialConstants mMaterialConstants[2];
 
 	// Animation
 	enum { Animation_Num = 9 };
 
-	const std::string mSkeletonName = "mixamo";
+	//const std::string mSkeletonName = "mixamo";
 
-	const std::string bind_pose_filename = "Contents/Models/bind.fbx";
-
-	//const std::string mAnimationFilename[Animation_Num] =
-	//{
-	//	"Contents/Models/Locomotion//Standard Idle.fbx",
-	//	"Contents/Models/Locomotion//Standard Walk.fbx",
-	//	"Contents/Models/Locomotion//Standard Run.fbx",
-	//	"Contents/Models/Locomotion/Walking Backwards.fbx",
-	//	"Contents/Models/Locomotion/Running Backward.fbx",
-	//	"Contents/Models/Locomotion/left strafe walking.fbx",
-	//	"Contents/Models/Locomotion/right strafe walking.fbx",
-	//	"Contents/Models/Locomotion/left strafe.fbx",
-	//	"Contents/Models/Locomotion/right strafe.fbx"
-	//};
+	//const std::string bind_pose_filename = "Contents/Models/bind.fbx";
+	
+	const std::string bind_pose_filename = "Contents/Models/Models/NPBRGirl.fbx";
+	const std::string target_bind_pose_filename = "Contents/Models/Models/Ch36_nonPBR.fbx";
 
 	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
@@ -230,11 +183,8 @@ private:
 
 	MotionAnalyzer analyzer[Animation_Num];
 	PlaybackController mController;
-	Character character;
-
-	// Trajectory Points
-	//RenderItem* pTrajectoryPointRitems[4];
-	//RenderItem* pMatchedPointRitems[4];
+	Character source_character;
+	Character target_character;
 
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
@@ -603,10 +553,11 @@ bool Engine::Initialize()
 
 
 	// Set Camera
-	mCamera.SetPosition(0.0f, 25.0f, -50.0f);
 	mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+	mCamera.LookAt(Vector3(0.0f, 25.0f, -50.0f), Vector3(0.0f, 0.0f, 1.0f), Vector3(0.0f, 1.0f, 0.0f));
 
-	LoadSkinnedModel();
+	LoadSourceModel();
+	LoadTargetModel();
 	BuildShapeGeometry();
 	BuildMaterials();
 	BuildRenderItems();
@@ -667,10 +618,10 @@ void Engine::Render(const GameTimer& gt)
 	void* pSkinnedShadowPerPassCB = m_SkinnedShadowMapPerPassCB->Map(graphicsContext, 256);
 	memcpy(pSkinnedShadowPerPassCB, &mShadowPassCB, sizeof(mShadowPassCB));
 
-	void* pShadowSkinnedCB = m_SkinnedShadowSkinnedCB->Map(graphicsContext, 256);
-	memcpy(pShadowSkinnedCB, &mSkinnedConstants, sizeof(mSkinnedConstants));
+	//void* pShadowSkinnedCB = m_SkinnedShadowSkinnedCB->Map(graphicsContext, 256);
+	//memcpy(pShadowSkinnedCB, &source_character.ri->skinnedConstant, sizeof(source_character.ri->skinnedConstant));
 
-	DrawRenderItems(graphicsContext, m_SkinnedShadowMapPSO.get(), m_SkinnedShadowMapPerDrawCB.get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque], false);
+	DrawRenderItems(graphicsContext, m_SkinnedShadowMapPSO.get(), m_SkinnedShadowMapPerDrawCB.get(), m_SkinnedShadowSkinnedCB.get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque], false);
 
 	// Draw opaque to shadowmap
 	graphicsContext.SetPipelineState(m_ShadowMapPSO.get());
@@ -678,8 +629,8 @@ void Engine::Render(const GameTimer& gt)
 	void* pShadowPerPassCB = m_ShadowMapPerPassCB->Map(graphicsContext, 256);
 	memcpy(pShadowPerPassCB, &mShadowPassCB, sizeof(mShadowPassCB));
 
-	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Checkboard], false);
-	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Opaque], false);
+	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Checkboard], false);
+	DrawRenderItems(graphicsContext, m_ShadowMapPSO.get(), m_ShadowMapPerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Opaque], false);
 
 	// Shadow Map¹ý¶Èµ½Read×´Ì¬
 	graphicsContext.TransitionResource(*m_ShadowMap, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -707,7 +658,7 @@ void Engine::Render(const GameTimer& gt)
 	void* ckBLightCB = m_CkBLightCB->Map(graphicsContext, 256);
 	memcpy(ckBLightCB, &mLightConstants, sizeof(mLightConstants));
 
-	DrawRenderItems(graphicsContext, m_CkBPSO.get(), m_CkBPerDrawCB.get(), mRitemLayer[(int)RenderLayer::Checkboard]);
+	DrawRenderItems(graphicsContext, m_CkBPSO.get(), m_CkBPerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Checkboard]);
 
 	// <------------------------------------Main Pass---------------------------------------------->
 
@@ -719,7 +670,7 @@ void Engine::Render(const GameTimer& gt)
 	void* lightCB = m_LightCB->Map(graphicsContext, 256);
 	memcpy(lightCB, &mLightConstants, sizeof(mLightConstants));
 
-	DrawRenderItems(graphicsContext, m_MainPassPSO.get(), m_PerDrawCB.get(), mRitemLayer[(int)RenderLayer::Opaque]);
+	DrawRenderItems(graphicsContext, m_MainPassPSO.get(), m_PerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Opaque]);
 
 	// <------------------------------------Skinned Pass---------------------------------------------->
 	graphicsContext.SetPipelineState(m_SkinnedPassPSO.get());
@@ -727,13 +678,13 @@ void Engine::Render(const GameTimer& gt)
 	void* skinnedPerPassCB = m_SkinnedPerPassCB->Map(graphicsContext, 256);
 	memcpy(skinnedPerPassCB, &mMainPassCB, sizeof(mMainPassCB));
 
-	void* skinnedCB = m_SkinnedCB->Map(graphicsContext, 256);
-	memcpy(skinnedCB, &mSkinnedConstants, sizeof(mSkinnedConstants));
+	//void* skinnedCB = m_SkinnedCB->Map(graphicsContext, 256);
+	//memcpy(skinnedCB, &source_character.ri->skinnedConstant, sizeof(source_character.ri->skinnedConstant));
 
 	void* skinnedlightCB = m_SkinnedLightCB->Map(graphicsContext, 256);
 	memcpy(skinnedlightCB, &mLightConstants, sizeof(mLightConstants));
 
-	DrawRenderItems(graphicsContext, m_SkinnedPassPSO.get(), m_SkinnedPerDrawCB.get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
+	DrawRenderItems(graphicsContext, m_SkinnedPassPSO.get(), m_SkinnedPerDrawCB.get(), m_SkinnedCB.get(),mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
 
 	// <------------------------------------GUI Pass---------------------------------------------->
 	UpdateGUI();
@@ -824,20 +775,36 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 	//blender.deltaT = mController.GetDeltaTime();
 	//character.UpdateController(gt.DeltaTime());
 	//character.UpdateBlendingMotion(blender);
-	character.UpdateFinalModelTransform();
+	source_character.UpdateFinalModelTransform();
+	target_character.UpdateFinalModelTransform();
 
     std::copy(
-        std::begin(character.models),
-        std::end(character.models),
-        &mSkinnedConstants.BoneTransforms[0]);
+        std::begin(source_character.models),
+        std::end(source_character.models),
+		&source_character.ri->skinnedConstant.BoneTransforms[0]);
+	std::copy(
+		std::begin(target_character.models),
+		std::end(target_character.models),
+		&target_character.ri->skinnedConstant.BoneTransforms[0]);
+
+	XMMATRIX m1 = XMMatrixScaling(0.05f, 0.05f, 0.05f);
+	m1 *= XMMatrixRotationQuaternion(source_character.transform.mRot.mValue);
+	m1 *= XMMatrixTranslationFromVector(source_character.transform.mTrans.mValue);
+	XMStoreFloat4x4(&source_character.ri->World, m1);
+
+	XMMATRIX m2 = XMMatrixScaling(0.05f, 0.05f, 0.05f);
+	m2 *= XMMatrixRotationQuaternion(target_character.transform.mRot.mValue);
+	m2 *= XMMatrixTranslationFromVector(target_character.transform.mTrans.mValue);
+	XMStoreFloat4x4(&target_character.ri->World, m2);
+
 
 	for (int i = 0; i < mRitemLayer[(int)RenderLayer::SkinnedOpaque].size(); i++) {
 		XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, 0.05f);
 		m *= XMMatrixRotationAxis(Vector3(0, 1, 0), MathHelper::Pi);// TODO
-		m *= XMMatrixRotationQuaternion(character.character_controller.simulation_rotation);
-		m *= XMMatrixTranslationFromVector(character.character_controller.simulation_position * 0.05f);
-		XMStoreFloat4x4(&mRitemLayer[(int)RenderLayer::SkinnedOpaque][i]->World, m);
+		m *= XMMatrixRotationQuaternion(source_character.character_controller.simulation_rotation);
+		m *= XMMatrixTranslationFromVector(source_character.character_controller.simulation_position * 0.05f);
 	}
+
 
 }
 
@@ -963,7 +930,7 @@ void Engine::UpdateGUI()
 
 	if (ImGui::Begin("Panel"))
 	{
-		character.db.OnGui();
+		source_character.db.OnGui();
 		mController.OnGui();
 		////blender.OnGui();
 		//float t[3] = { source_pos.x, source_pos.y, source_pos.z };
@@ -1012,7 +979,7 @@ void Engine::UpdateGUI()
 		}
 		draw_list->AddLine(ImVec2(origin.x, origin.y), ImVec2(origin.x + 0.8f * radius * gamepadEndPoint.x, origin.y + 0.8f * radius * gamepadEndPoint.y), IM_COL32(255, 255, 0, 255), 2.0f);
 
-		character.character_controller.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
+		source_character.character_controller.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
 
 		ImGui::End();
 	}
@@ -1188,7 +1155,7 @@ void Engine::BuildShapeGeometry()
 	mGeometries[geo->Name] = std::move(geo);
 }
 
-void Engine::LoadSkinnedModel()
+void Engine::LoadSourceModel()
 {
 	std::vector<Animation::SkinnedVertex> vertices;
 	std::vector<std::uint16_t> indices;	
@@ -1197,85 +1164,17 @@ void Engine::LoadSkinnedModel()
 
 	FBXLoader fbxLoader;
 	fbxLoader.LoadBindPose(bind_pose_filename, vertices, indices,
-		mSkinnedSubsets, mSkinnedMats, character.db);
-	
-	/*for (int i = 0; i < animation_num; ++i) {
-		fbxLoader.LoadFBXClip(mAnimationFilename[i], character.db);
-	}*/
-
-	//character.db.convert_to_fps(60.0f);
-
-	//for (int i = 0; i < animation_num; ++i)
-	//{
-	//	std::string clipName = character.db.GetAnimationClipName(i);
-	//	mSamplers[i] = character.db.GetAnimationClipByName(clipName);
-	//	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Analyze", "MotionAnalyzer", 794, clipName);
-	//}
-
-	//character.Initialize();
-
-	// Initialize analyzer
-	//for (int i = 0; i < animation_num; ++i)
-	//{
-	//	analyzer[i].legC = &character.leg_controller;
-	//	analyzer[i].animation = mSamplers[i];
-	//	analyzer[i].Analyze();
-	//}
-
-	//// Prepare gradient band interpolator
-	//std::vector<Vector2> velocities;
-	//for (size_t i = 0; i < animation_num; ++i)
-	//{
-	//	Vector3 velocity = analyzer[i].mCycleSpeed * analyzer[i].mCycleDirection;
-	//	if (i == 0) velocity = Vector3::Zero;
-	//	velocities.push_back(Vector2(velocity.x, velocity.z));
-	//}
-	//interpolator = std::make_shared<PolarGradientBandInterpolator>(velocities);
-	//character.character_controller.simulation_run_fwrd_speed = -interpolator->minVy * 1.5f;
-	//character.character_controller.simulation_run_side_speed = interpolator->maxVx * 1.5f;
-	//character.character_controller.simulation_run_back_speed = interpolator->maxVy * 1.5f;
-	////character.character_controller_.simulation_run_fwrd_speed = 4.0f;
-	////character.character_controller_.simulation_run_side_speed = 3.0f;
-	////character.character_controller_.simulation_run_back_speed = 2.5f;
-
-	//// Calculate weight
-	//std::vector<float> weights = interpolator->Interpolate(Vector2(0.0, 0.0));
-	////std::vector<float> weights = interpolator->Interpolate(Vector2(velocities[0].x, velocities[0].y));
-
-	//// Prepares blending layers
-	//std::vector<BlendingJob::Layer> layers;
-	//for (size_t i = 0; i < animation_num; i++)
-	//{
-	//	BlendingJob::Layer layer;
-	//	layer.weight = weights[i];
-	//	layer.t = 0.0f;
-	//	layer.animation = analyzer[i].animation;
-	//	layer.Nk = 4;
-	//	layer.K[0] = 0.0f * analyzer[i].animation->get_duration_in_second();
-	//	layer.K[1] = analyzer[i].cycles[0].postliftTime * analyzer[i].animation->get_duration_in_second();
-	//	layer.K[2] = analyzer[i].cycles[1].postliftTime * analyzer[i].animation->get_duration_in_second();
-	//	layer.K[3] = 1.0f * analyzer[i].animation->get_duration_in_second();
-	//	qsort(layer.K,
-	//		layer.Nk,
-	//		sizeof(float),
-	//		[](const void* x, const void* y) {
-	//			return *(int*)x - *(int*)y;
-	//		});
-	//	layers.push_back(layer);
-	//}
-
+		mSkinnedSubsets, mSkinnedMats, source_character.db);
+	source_character.name = "Source_Maximo";
+	source_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
 	//// Prepares playback controller
 	mController.SetTimeRatio(0.0f);
-
-	//// Setups blending job
-	//blender.layers = layers;
-	//blender.interpolator = interpolator;
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
     const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = mSkeletonName;
+	geo->Name = source_character.name;
 
 	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
 	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
@@ -1299,7 +1198,7 @@ void Engine::LoadSkinnedModel()
 	for(UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
 	{
 		SubmeshGeometry submesh;
-		std::string name = "sm_" + std::to_string(i);
+		std::string name = "source_sm_" + std::to_string(i);
 		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
         submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
         submesh.BaseVertexLocation = 0;
@@ -1308,6 +1207,57 @@ void Engine::LoadSkinnedModel()
 	}
 
 	mGeometries[geo->Name] = std::move(geo);
+}
+
+void Engine::LoadTargetModel()
+{
+	std::vector<Animation::SkinnedVertex> vertices;
+	std::vector<std::uint16_t> indices;
+
+	FBXLoader fbxLoader;
+	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, target_character.db);
+	target_character.name = "Target_Maximo";
+	target_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
+
+	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
+	const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = target_character.name;
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_VertexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)vertices.size(), sizeof(Animation::SkinnedVertex), (void*)vertices.data());
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_IndexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)indices.size(), sizeof(std::uint16_t), (void*)indices.data());
+
+	geo->VertexBufferGPU = m_VertexBuffer->GetResource();
+
+	geo->IndexBufferGPU = m_IndexBuffer->GetResource();
+
+	geo->VertexByteStride = sizeof(Animation::SkinnedVertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	for (UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
+	{
+		SubmeshGeometry submesh;
+		std::string name = "target_sm_" + std::to_string(i);
+		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
+		submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
+		submesh.BaseVertexLocation = 0;
+
+		geo->DrawArgs[name] = submesh;
+	}
+
+	mGeometries[geo->Name] = std::move(geo);
+
 }
 
 void Engine::BuildMaterials()
@@ -1357,98 +1307,22 @@ void Engine::BuildRenderItems()
 	mRitemLayer[(int)RenderLayer::Checkboard].push_back(gridRitem.get());
 	mAllRitems.push_back(std::move(gridRitem));
 
-	//// Foot IK Target
-	//auto targetRitem = std::make_unique<RenderItem>();
-	//targetRitem->World = MathHelper::Identity4x4();
-	//XMStoreFloat4x4(&targetRitem->World, Matrix::CreateAffineTransformation(Vector3::One, source_pos, source_rot));
-	//XMStoreFloat4x4(&targetRitem->TexTransform, Matrix::Identity);
-	//targetRitem->ObjCBIndex = objCBIndex++;
-	//targetRitem->Mat = mMaterials["tile0"].get();
-	//targetRitem->Geo = mGeometries["shapeGeo"].get();
-	//targetRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//targetRitem->IndexCount = targetRitem->Geo->DrawArgs["box"].IndexCount;
-	//targetRitem->StartIndexLocation = targetRitem->Geo->DrawArgs["box"].StartIndexLocation;
-	//targetRitem->BaseVertexLocation = targetRitem->Geo->DrawArgs["box"].BaseVertexLocation;
-
-
-	//mRitemLayer[(int)RenderLayer::Opaque].push_back(targetRitem.get());
-	//pSourceRitem = targetRitem.get();
-	//mAllRitems.push_back(std::move(targetRitem));
-
-	////// Head IK Target
-	//auto head_target_ritem = std::make_unique<RenderItem>();
-	//head_target_ritem->World = MathHelper::Identity4x4();
-	//XMStoreFloat4x4(&head_target_ritem->World, Matrix::CreateAffineTransformation(Vector3::One, target_pos, target_rot));
-	//XMStoreFloat4x4(&head_target_ritem->TexTransform, Matrix::Identity);
-	//head_target_ritem->ObjCBIndex = objCBIndex++;
-	//head_target_ritem->Mat = mMaterials["tile0"].get();
-	//head_target_ritem->Geo = mGeometries["shapeGeo"].get();
-	//head_target_ritem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//head_target_ritem->IndexCount = head_target_ritem->Geo->DrawArgs["box"].IndexCount;
-	//head_target_ritem->StartIndexLocation = head_target_ritem->Geo->DrawArgs["box"].StartIndexLocation;
-	//head_target_ritem->BaseVertexLocation = head_target_ritem->Geo->DrawArgs["box"].BaseVertexLocation;
-
-	//mRitemLayer[(int)RenderLayer::Opaque].push_back(head_target_ritem.get());
-	//pTargetRitem = head_target_ritem.get();
-	//mAllRitems.push_back(std::move(head_target_ritem));
-	
-	// Trajectory
-	//for (int i = 0; i < 4; i++) {
-	//	auto trajectoryPointRitem = std::make_unique<RenderItem>();
-	//	trajectoryPointRitem->World = MathHelper::Identity4x4();
-	//	XMStoreFloat4x4(&trajectoryPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-	//	XMStoreFloat4x4(&trajectoryPointRitem->TexTransform, Matrix::Identity);
-	//	trajectoryPointRitem->ObjCBIndex = objCBIndex++;
-	//	trajectoryPointRitem->Mat = mMaterials["tile0"].get();
-	//	trajectoryPointRitem->Geo = mGeometries["shapeGeo"].get();
-	//	trajectoryPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//	trajectoryPointRitem->IndexCount = trajectoryPointRitem->Geo->DrawArgs["sphere"].IndexCount;
-	//	trajectoryPointRitem->StartIndexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	//	trajectoryPointRitem->BaseVertexLocation = trajectoryPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-	//	trajectoryPointRitem->Color = Colors::Yellow;
-
-	//	mRitemLayer[(int)RenderLayer::Opaque].push_back(trajectoryPointRitem.get());
-	//	pTrajectoryPointRitems[i] = trajectoryPointRitem.get();
-	//	mAllRitems.push_back(std::move(trajectoryPointRitem));
-
-	//}
-
-	//// Matched
-	//for (int i = 0; i < 4; i++) {
-	//	auto matchedPointRitem = std::make_unique<RenderItem>();
-	//	matchedPointRitem->World = MathHelper::Identity4x4();
-	//	XMStoreFloat4x4(&matchedPointRitem->World, XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-	//	XMStoreFloat4x4(&matchedPointRitem->TexTransform, Matrix::Identity);
-	//	matchedPointRitem->ObjCBIndex = objCBIndex++;
-	//	matchedPointRitem->Mat = mMaterials["tile0"].get();
-	//	matchedPointRitem->Geo = mGeometries["shapeGeo"].get();
-	//	matchedPointRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//	matchedPointRitem->IndexCount = matchedPointRitem->Geo->DrawArgs["sphere"].IndexCount;
-	//	matchedPointRitem->StartIndexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-	//	matchedPointRitem->BaseVertexLocation = matchedPointRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-	//	matchedPointRitem->Color = Colors::LightGreen;
-
-	//	mRitemLayer[(int)RenderLayer::Opaque].push_back(matchedPointRitem.get());
-	//	pMatchedPointRitems[i] = matchedPointRitem.get();
-	//	mAllRitems.push_back(std::move(matchedPointRitem));
-
-	//}
-
-	if (mGeometries[mSkeletonName]!=NULL)
+	std::string skeleton_name = source_character.name;
+	if (mGeometries[skeleton_name]!=NULL)
 	{
-		for (UINT i = 0; i < mGeometries[mSkeletonName]->DrawArgs.size(); ++i)
+		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
 		{
-			std::string submeshName = "sm_" + std::to_string(i);
+			std::string submeshName = "source_sm_" + std::to_string(i);
 
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, character.scale);
+			XMStoreFloat4x4(&ritem->World, source_character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;
 			ritem->Mat = mMaterials[mSkinnedMats[i].Name].get();
-			ritem->Geo = mGeometries[mSkeletonName].get();
+			ritem->Geo = mGeometries[skeleton_name].get();
 			ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 			ritem->IndexCount = ritem->Geo->DrawArgs[submeshName].IndexCount;
 			ritem->StartIndexLocation = ritem->Geo->DrawArgs[submeshName].StartIndexLocation;
@@ -1458,9 +1332,44 @@ void Engine::BuildRenderItems()
 			// All render items for this solider.m3d instance share
 			// the same skinned model instance.
 			ritem->SkinnedCBIndex = 0;
-			ritem->SkinnedModelInst = mSamplers[0];
+			ritem->IsSkinned = true;
+			//ritem->SkinnedModelInst = mSamplers[0];
 
 			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
+			source_character.ri = ritem.get();
+			mAllRitems.push_back(std::move(ritem));
+		}
+	}
+
+	skeleton_name = target_character.name;
+	if (mGeometries[skeleton_name] != NULL)
+	{
+		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
+		{
+			std::string submeshName = "target_sm_" + std::to_string(i);
+
+			auto ritem = std::make_unique<RenderItem>();
+
+			// Reflect to change coordinate system from the RHS the data was exported out as.
+			XMStoreFloat4x4(&ritem->World, source_character.scale);
+
+			ritem->TexTransform = MathHelper::Identity4x4();
+			ritem->ObjCBIndex = objCBIndex++;
+			ritem->Mat = mMaterials[mSkinnedMats[i].Name].get();
+			ritem->Geo = mGeometries[skeleton_name].get();
+			ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			ritem->IndexCount = ritem->Geo->DrawArgs[submeshName].IndexCount;
+			ritem->StartIndexLocation = ritem->Geo->DrawArgs[submeshName].StartIndexLocation;
+			ritem->BaseVertexLocation = ritem->Geo->DrawArgs[submeshName].BaseVertexLocation;
+			ritem->Color = Colors::White;
+
+			// All render items for this solider.m3d instance share
+			// the same skinned model instance.
+			ritem->SkinnedCBIndex = 0;
+			//ritem->SkinnedModelInst = mSamplers[0];
+
+			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
+			target_character.ri = ritem.get();
 			mAllRitems.push_back(std::move(ritem));
 		}
 	}
@@ -1501,7 +1410,7 @@ void Engine::BuildGUI()
 
 }
 
-void Engine::DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphics::PipelineState* pipelineState, Graphics::GpuDynamicBuffer* perDrawCB, const std::vector<RenderItem*>& ritems, bool useMaterial)
+void Engine::DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphics::PipelineState* pipelineState, Graphics::GpuDynamicBuffer* perDrawCB, Graphics::GpuDynamicBuffer* perSkinnedCB,const std::vector<RenderItem*>& ritems, bool useMaterial)
 {
 	// For each render item...
 	for (size_t i = 0; i < ritems.size(); ++i)
@@ -1516,6 +1425,11 @@ void Engine::DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphic
 		graphicsContext.SetPrimitiveTopology(ri->PrimitiveType);
 		if(useMaterial)
 			graphicsContext.SetShaderResourceBinding(ri->Mat->GetSRB());
+
+		if (ri->IsSkinned){
+			void* pSkinnedCB = perSkinnedCB->Map(graphicsContext, 256);
+			memcpy(pSkinnedCB, &ri->skinnedConstant, sizeof(ri->skinnedConstant));
+		}
 
 		ObjectConstants objConstants;
 		XMMATRIX world = XMLoadFloat4x4(&ri->World);
