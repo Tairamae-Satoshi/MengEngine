@@ -175,6 +175,7 @@
     <ClCompile Include="Common\Debug.cpp" />
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
+    <ClCompile Include="Common\GraphicDebug.cpp" />
     <ClCompile Include="Common\Layer.cpp" />
     <ClCompile Include="Common\LayerStack.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
@@ -236,6 +237,8 @@
     <ClInclude Include="Animation\GradientBandInterpolator.h" />
     <ClInclude Include="Animation\IKAimJob.h" />
     <ClInclude Include="Animation\IKRigging\IKChain.h" />
+    <ClInclude Include="Animation\IKRigging\IKCompute.h" />
+    <ClInclude Include="Animation\IKRigging\IKPoint.h" />
     <ClInclude Include="Animation\IKRigging\IKPose.h" />
     <ClInclude Include="Animation\IKRigging\IKRig.h" />
     <ClInclude Include="Animation\IKTwoBoneJob.h" />
@@ -261,6 +264,7 @@
     <ClInclude Include="Common\Debug.h" />
     <ClInclude Include="Common\GameTimer.h" />
     <ClInclude Include="Common\GeometryGenerator.h" />
+    <ClInclude Include="Common\GraphicDebug.h" />
     <ClInclude Include="Common\HashUtils.hpp" />
     <ClInclude Include="Common\Layer.h" />
     <ClInclude Include="Common\LayerStack.h" />

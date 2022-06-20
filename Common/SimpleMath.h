@@ -321,6 +321,9 @@ namespace DirectX
 
 			static Vector3 TransformVector(const Vector3& v, const Matrix& m) noexcept;
 
+			static float Angle(const Vector3& v1, const Vector3& v2) noexcept;
+
+
 			// Constants
 			static const Vector3 Zero;
 			static const Vector3 One;

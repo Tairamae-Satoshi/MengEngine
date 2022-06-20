@@ -152,6 +152,14 @@ bool FBXLoader::GetBindPose(const aiScene* pScene)
 		Transform transform;
 
 		m.Transpose().Decompose(transform.mScale.mValue, transform.mRot.mValue, transform.mTrans.mValue);
+	
+		/*char out[50];
+		if (i == 50)
+		{
+			Quaternion& q = transform.mRot.mValue;
+			sprintf(out, "index: %f, %f, %f, %f", q.x, q.y, q.z, q.w);
+			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "Load", "MotionAnalyzer", 256, out);
+		}*/
 
 		bind_pose.push_back(transform);
 	}
@@ -284,9 +292,6 @@ void FBXLoader::LoadBones(UINT MeshIndex,
 			BoneIndex = m_NumBones++;
 			// Bone Info
 			aiMatrix4x4 aiOffsetMatrix = pMesh->mBones[i]->mOffsetMatrix;
-			char out[100];
-			//sprintf(out, "index: %s", aiAnimationClip->mNumChannels);
-			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "FindSwingChangeTime", "MotionAnalyzer", 256, pMesh->mBones[i]->mName.C_Str());
 
 			// need to transpose
 			aiOffsetMatrix.Transpose();
@@ -355,8 +360,6 @@ void FBXLoader::ReadAnimationClips(const std::string& path, const aiScene* pScen
 				UINT index = it - nodeIndexToName.begin();
 				ReadBoneKeyframes(pNodeAnim, animationClip.mSamples[index]);
 			}
-			sprintf(out, "index: %d", aiAnimationClip->mNumChannels);
-			Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "FindSwingChangeTime", "MotionAnalyzer", 256, boneName);
 
 		}
 

@@ -31,15 +31,16 @@ namespace Animation
 		return true;
 	}
 
-	void Character::UpdateFinalModelTransform()
+	void Character::UpdateFinalModelTransform(bool isBindpose)
 	{
+		if (isBindpose)
+			locals = db.GetBindPose();
+
 		LocalToModelJob ltm_job;
 		ltm_job.skeleton = &db;
-		locals = db.GetBindPose();
 		ltm_job.input = locals;
-		if (!ltm_job.Run(true, true)) {
-			//return false;
-		}
+		ltm_job.Run(true, true);
+
 		models = ltm_job.output;
 		//transform.mTrans.mValue = Vector3::Transform(locals[0].mTrans.mValue, scale);
 	}
@@ -78,6 +79,22 @@ namespace Animation
 		locals[leg.hip].mRot.mValue = ik_job.start_joint_correction * locals[leg.hip].mRot.mValue;
 		locals[leg.knee].mRot.mValue = ik_job.mid_joint_correction * locals[leg.knee].mRot.mValue;
 
+	}
+
+	void Character::UpdateRenderItem()
+	{
+		for (auto ri : ritems)
+		{
+			std::copy(
+				std::begin(models),
+				std::end(models),
+				&ri->skinnedConstant.BoneTransforms[0]);
+
+			XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, 0.05f);
+			m *= XMMatrixRotationQuaternion(transform.mRot.mValue);
+			m *= XMMatrixTranslationFromVector(transform.mTrans.mValue);
+			XMStoreFloat4x4(&ri->World, m);
+		}
 	}
 
 	void Character::UpdateBlendingMotion(BlendingJob& _blending_job)

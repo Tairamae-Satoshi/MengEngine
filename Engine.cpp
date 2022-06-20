@@ -7,6 +7,7 @@
 #include "Common/UploadBuffer.h"
 #include "Common/GeometryGenerator.h"
 #include "Common/Camera.h"
+#include "Common/GraphicDebug.h"
 #include "Renderer/VertexFactory.h"
 #include "Renderer/FrameResource.h"
 #include "Renderer/Material.h"
@@ -17,6 +18,7 @@
 #include "Animation/GradientBandInterpolator.h"
 #include "Animation/MotionAnalyzer.h"
 #include "Animation/Character/Character.h"
+#include "Animation/IKRigging/IKCompute.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "Common/stb_image.h"
 #include "DirectXTex/DirectXTex/DirectXTex.h"
@@ -56,13 +58,13 @@ private:
     void UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt);
 	void UpdateMainPassCB(void* perPassCB, const GameTimer& gt);
 	void UpdateGUI();
-	void UpdateTarget(const GameTimer& gt);
+	void UpdateGraphicDebug();
 	void UpdateShadowTransform(const GameTimer& gt);
 	void UpdateShadowPerPassCB(const GameTimer& gt);
 
     void BuildShapeGeometry();
-	void LoadSourceModel();
 	void LoadTargetModel();
+	void LoadSourceModel();
     void BuildMaterials();
     void BuildRenderItems();
 	void BuildGUI();
@@ -145,20 +147,18 @@ private:
 
 	// Animation
 	enum { Animation_Num = 9 };
-
-	//const std::string mSkeletonName = "mixamo";
-
-	//const std::string bind_pose_filename = "Contents/Models/bind.fbx";
 	
-	const std::string bind_pose_filename = "Contents/Models/Models/NPBRGirl.fbx";
-	const std::string target_bind_pose_filename = "Contents/Models/Models/Ch36_nonPBR.fbx";
+	const std::string bind_pose_filename = "Contents/Models/Models/xbot.fbx";
+	const std::string target_bind_pose_filename = "Contents/Models/Models/xbot.fbx";
+	//Ch36_nonPBR
+	//NPBRGirl
 
 	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
 	{
-		"Contents/Models/Locomotion//Standard Idle.fbx",
-		"Contents/Models/Locomotion//Standard Walk.fbx",
-		"Contents/Models/Locomotion//Standard Run.fbx",
+		"Contents/Models/Locomotion/Standard Idle.fbx",
+		"Contents/Models/Locomotion/Standard Walk.fbx",
+		"Contents/Models/Locomotion/Standard Run.fbx",
 		"Contents/Models/Locomotion/Walking Backwards.fbx",
 		"Contents/Models/Locomotion/Running Backward.fbx",
 		"Contents/Models/Locomotion/left strafe walking.fbx",
@@ -186,6 +186,8 @@ private:
 	Character source_character;
 	Character target_character;
 
+	IKPose ik_pose;
+
 	std::shared_ptr<PolarGradientBandInterpolator> interpolator;
 
 	const AnimationClip* mSamplers[Animation_Num] = { nullptr };
@@ -193,7 +195,8 @@ private:
     std::vector<FBXLoader::FbxMaterial> mSkinnedMats;
     std::vector<std::string> mSkinnedTextureNames;
 
-	BlendingJob blender;
+	//BlendingJob blender;
+	SamplingJob sampler;
 
 	Camera mCamera;
 
@@ -216,6 +219,7 @@ private:
 
     POINT mLastMousePos;
 
+	GraphicDebug graphic_debug;
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
@@ -591,7 +595,7 @@ void Engine::Update(const GameTimer& gt)
 	UpdateShadowPerPassCB(gt);
 	UpdateMainPassCB(nullptr, gt);
 	UpdateSkinnedCBs(nullptr, gt);
-	UpdateTarget(gt);
+	UpdateGraphicDebug();
 }
 
 
@@ -671,6 +675,7 @@ void Engine::Render(const GameTimer& gt)
 	memcpy(lightCB, &mLightConstants, sizeof(mLightConstants));
 
 	DrawRenderItems(graphicsContext, m_MainPassPSO.get(), m_PerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Opaque]);
+	DrawRenderItems(graphicsContext, m_MainPassPSO.get(), m_PerDrawCB.get(), nullptr, mRitemLayer[(int)RenderLayer::Debug]);
 
 	// <------------------------------------Skinned Pass---------------------------------------------->
 	graphicsContext.SetPipelineState(m_SkinnedPassPSO.get());
@@ -769,42 +774,28 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 {   
     // We only have one skinned model being animated.
 	
-	mController.Update(blender.GetDuration(), gt.DeltaTime());
+	mController.Update(sampler.animation->get_duration_in_second(), gt.DeltaTime());
 
 	//blender.t = mController.GetTimeRatio();
 	//blender.deltaT = mController.GetDeltaTime();
 	//character.UpdateController(gt.DeltaTime());
 	//character.UpdateBlendingMotion(blender);
-	source_character.UpdateFinalModelTransform();
-	target_character.UpdateFinalModelTransform();
+	sampler.ratio = mController.GetTimeRatio();;
+	sampler.Run();
+	source_character.locals = sampler.output;
 
-    std::copy(
-        std::begin(source_character.models),
-        std::end(source_character.models),
-		&source_character.ri->skinnedConstant.BoneTransforms[0]);
-	std::copy(
-		std::begin(target_character.models),
-		std::end(target_character.models),
-		&target_character.ri->skinnedConstant.BoneTransforms[0]);
+	// Retargeting
+	source_character.ik_rig.pose = source_character.locals;
+	IKCompute::Run(source_character.ik_rig, ik_pose);
 
-	XMMATRIX m1 = XMMatrixScaling(0.05f, 0.05f, 0.05f);
-	m1 *= XMMatrixRotationQuaternion(source_character.transform.mRot.mValue);
-	m1 *= XMMatrixTranslationFromVector(source_character.transform.mTrans.mValue);
-	XMStoreFloat4x4(&source_character.ri->World, m1);
+	ik_pose.ApplyRig(target_character.ik_rig);
+	target_character.locals = target_character.ik_rig.pose;
 
-	XMMATRIX m2 = XMMatrixScaling(0.05f, 0.05f, 0.05f);
-	m2 *= XMMatrixRotationQuaternion(target_character.transform.mRot.mValue);
-	m2 *= XMMatrixTranslationFromVector(target_character.transform.mTrans.mValue);
-	XMStoreFloat4x4(&target_character.ri->World, m2);
+	source_character.UpdateFinalModelTransform(false);
+	target_character.UpdateFinalModelTransform(false);
 
-
-	for (int i = 0; i < mRitemLayer[(int)RenderLayer::SkinnedOpaque].size(); i++) {
-		XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, 0.05f);
-		m *= XMMatrixRotationAxis(Vector3(0, 1, 0), MathHelper::Pi);// TODO
-		m *= XMMatrixRotationQuaternion(source_character.character_controller.simulation_rotation);
-		m *= XMMatrixTranslationFromVector(source_character.character_controller.simulation_position * 0.05f);
-	}
-
+	source_character.UpdateRenderItem();
+	target_character.UpdateRenderItem();
 
 }
 
@@ -877,6 +868,7 @@ void Engine::UpdateShadowPerPassCB(const GameTimer& gt)
 	//currPassCB->CopyData(1, mShadowPassCB);
 }
 
+
 void Engine::UpdateMainPassCB(void* perPassCB, const GameTimer& gt)
 {
 	XMMATRIX view = mCamera.GetView();
@@ -930,79 +922,46 @@ void Engine::UpdateGUI()
 
 	if (ImGui::Begin("Panel"))
 	{
+		ImGui::Text("Source Character");
 		source_character.db.OnGui();
+		ImGui::Text("Target Character");
+		target_character.db.OnGui();
 		mController.OnGui();
-		////blender.OnGui();
-		//float t[3] = { source_pos.x, source_pos.y, source_pos.z };
-		//if (ImGui::InputFloat3("Target", t))
-		//{
-		//	source_pos = Vector3(t);
-		//	XMStoreFloat4x4(&pSourceRitem->World, XMMatrixTranslation(source_pos.x, source_pos.y, source_pos.z));
-		//}
-		//ImGui::SliderFloat("Weight", &character.foot_ik_weight, 0.0f, 1.0f);
-		//ImGui::SliderFloat("Soften", &character.foot_ik_soften, 0.0f, 1.0f);
-
-		//ImGui::Image((ImTextureID)m_ShadowMapSRV->GetGpuHandle().ptr, ImVec2(1280, 720));
-
-		ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
-		float radius = 100.0f;
-		ImVec2 canvas_sz = ImVec2(2.0f * radius, 2.0f * radius);   // Resize canvas to what's available
-		ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
-
-		// Draw gamepad UI
-		static ImVec2 scrolling(0.0f, 0.0f);
-		static ImVec2 gamepadEndPoint(0.0f, 0.0f);
-
-		ImGuiIO& io = ImGui::GetIO();
-		ImDrawList* draw_list = ImGui::GetWindowDrawList();
-		const ImVec2 origin((canvas_p0.x + canvas_p1.x) * 0.5f, (canvas_p0.y + canvas_p1.y) * 0.5f); // Lock scrolled origin
-		draw_list->AddCircleFilled(origin, radius, IM_COL32(50, 50, 50, 255));
-		draw_list->AddCircle(origin, radius, IM_COL32(255, 255, 255, 255));
-		//draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
-		//draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
-
-		ImGui::InvisibleButton("canvas", canvas_sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
-		const bool is_hovered = ImGui::IsItemHovered(); // Hovered
-		const bool is_active = ImGui::IsItemActive();   // Held
-		//const ImVec2 origin_in_canvas((canvas_p0.x + canvas_p1.x) * 0.5f - origin.x, (canvas_p0.y + canvas_p1.y) * 0.5f - origin.y); // Lock scrolled origin
-		const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
-		const float length = sqrtf(mouse_pos_in_canvas.x * mouse_pos_in_canvas.x + mouse_pos_in_canvas.y * mouse_pos_in_canvas.y);
-		if (is_hovered)
-		{
-			gamepadEndPoint.x = mouse_pos_in_canvas.x / radius;
-			gamepadEndPoint.y = mouse_pos_in_canvas.y / radius;
-		}
-		else
-		{
-			gamepadEndPoint.x = 0.0f;
-			gamepadEndPoint.y = 0.0f;
-		}
-		draw_list->AddLine(ImVec2(origin.x, origin.y), ImVec2(origin.x + 0.8f * radius * gamepadEndPoint.x, origin.y + 0.8f * radius * gamepadEndPoint.y), IM_COL32(255, 255, 0, 255), 2.0f);
-
-		source_character.character_controller.gamepadstick_left = Vector3(gamepadEndPoint.x, 0.0f, -gamepadEndPoint.y);
-
+		
 		ImGui::End();
 	}
 
 	//ImGui::End();
 }
 
-void Engine::UpdateTarget(const GameTimer& gt)
+void Engine::UpdateGraphicDebug()
 {
+	mRitemLayer[(int)RenderLayer::Debug].clear();
 
-	//for (int i = 0; i < 4; i++) {
-	//	XMStoreFloat4x4(&pTrajectoryPointRitems[i]->World, XMMatrixTranslation(
-	//		character.character_controller.trajectory_positions[i].x * 0.05f,
-	//		0.0f,
-	//		character.character_controller.trajectory_positions[i].z * 0.05f));
-	//}
+	//graphic_debug.DrawLine(Vector3(0.0f, 0.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f).Normalized(), 10.0f, Vector4(Colors::Red));
+	//graphic_debug.DrawLine(Vector3(1.0f, 1.0f, 1.0f), Vector3(3.0f, 3.0f, 1.0f), Vector4(Colors::Yellow));
 
-	//for (int i = 0; i < 4; i++) {
-	//	XMStoreFloat4x4(&pMatchedPointRitems[i]->World, XMMatrixTranslation(
-	//		character.character_controller.matched_positions[i].x * 0.05f,
-	//		0.0f,
-	//		character.character_controller.matched_positions[i].z * 0.05f));
-	//}
+	for (auto line : graphic_debug.lines)
+	{
+		auto lineRitem = std::make_unique<RenderItem>();
+		lineRitem->World = MathHelper::Identity4x4();
+		Vector3 dir = line.p2 - line.p1;
+		float len = dir.Length();
+		Quaternion q = Quaternion::CreateFromVectors(Vector3::UnitY, dir);
+		XMStoreFloat4x4(&lineRitem->World, XMMatrixRotationQuaternion(q) * XMMatrixScaling(len, len, len) * XMMatrixTranslationFromVector(line.p1));
+		XMStoreFloat4x4(&lineRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
+		lineRitem->ObjCBIndex = 0;//TODO
+		lineRitem->Mat = mMaterials["tile0"].get();
+		lineRitem->Geo = mGeometries["shapeGeo"].get();
+		lineRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+		lineRitem->IndexCount = lineRitem->Geo->DrawArgs["line"].IndexCount;
+		lineRitem->StartIndexLocation = lineRitem->Geo->DrawArgs["line"].StartIndexLocation;
+		lineRitem->BaseVertexLocation = lineRitem->Geo->DrawArgs["line"].BaseVertexLocation;
+		lineRitem->Color = line.color;
+		mRitemLayer[(int)RenderLayer::Debug].push_back(lineRitem.get());
+		mAllRitems.push_back(std::move(lineRitem));
+	}
+	graphic_debug.Update();
 }
 
 
@@ -1014,7 +973,8 @@ void Engine::BuildShapeGeometry()
 	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
 	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
     GeometryGenerator::MeshData quad = geoGen.CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
-    
+	GeometryGenerator::MeshData line = geoGen.CreateLine(0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+
 	//
 	// We are concatenating all the geometry into one big vertex/index buffer.  So
 	// define the regions in the buffer each submesh covers.
@@ -1026,6 +986,7 @@ void Engine::BuildShapeGeometry()
 	UINT sphereVertexOffset = gridVertexOffset + (UINT)grid.Vertices.size();
 	UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere.Vertices.size();
     UINT quadVertexOffset = cylinderVertexOffset + (UINT)cylinder.Vertices.size();
+	UINT lineVertexOffset = quadVertexOffset + (UINT)quad.Vertices.size();
 
 	// Cache the starting index for each object in the concatenated index buffer.
 	UINT boxIndexOffset = 0;
@@ -1033,6 +994,7 @@ void Engine::BuildShapeGeometry()
 	UINT sphereIndexOffset = gridIndexOffset + (UINT)grid.Indices32.size();
 	UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere.Indices32.size();
     UINT quadIndexOffset = cylinderIndexOffset + (UINT)cylinder.Indices32.size();
+	UINT lineIndexOffset = quadIndexOffset + (UINT)quad.Indices32.size();
 
 	SubmeshGeometry boxSubmesh;
 	boxSubmesh.IndexCount = (UINT)box.Indices32.size();
@@ -1059,6 +1021,12 @@ void Engine::BuildShapeGeometry()
     quadSubmesh.StartIndexLocation = quadIndexOffset;
     quadSubmesh.BaseVertexLocation = quadVertexOffset;
 
+	SubmeshGeometry lineSubmesh;
+	lineSubmesh.IndexCount = (UINT)line.Indices32.size();
+	lineSubmesh.StartIndexLocation = lineIndexOffset;
+	lineSubmesh.BaseVertexLocation = lineVertexOffset;
+
+
 	//
 	// Extract the vertex elements we are interested in and pack the
 	// vertices of all the meshes into one vertex buffer.
@@ -1069,7 +1037,8 @@ void Engine::BuildShapeGeometry()
 		grid.Vertices.size() +
 		sphere.Vertices.size() +
 		cylinder.Vertices.size() + 
-        quad.Vertices.size();
+        quad.Vertices.size()+
+		line.Vertices.size();
 
 	std::vector<Vertex> vertices(totalVertexCount);
 
@@ -1114,12 +1083,22 @@ void Engine::BuildShapeGeometry()
         vertices[k].TangentU = quad.Vertices[i].TangentU;
     }
 
+	for (int i = 0; i < line.Vertices.size(); ++i, ++k)
+	{
+		vertices[k].Pos = line.Vertices[i].Position;
+		vertices[k].Normal = line.Vertices[i].Normal;
+		vertices[k].TexC = line.Vertices[i].TexC;
+		vertices[k].TangentU = line.Vertices[i].TangentU;
+	}
+
+
 	std::vector<std::uint16_t> indices;
 	indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
 	indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
 	indices.insert(indices.end(), std::begin(sphere.GetIndices16()), std::end(sphere.GetIndices16()));
 	indices.insert(indices.end(), std::begin(cylinder.GetIndices16()), std::end(cylinder.GetIndices16()));
     indices.insert(indices.end(), std::begin(quad.GetIndices16()), std::end(quad.GetIndices16()));
+	indices.insert(indices.end(), std::begin(line.GetIndices16()), std::end(line.GetIndices16()));
 
     const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
     const UINT ibByteSize = (UINT)indices.size()  * sizeof(std::uint16_t);
@@ -1151,60 +1130,7 @@ void Engine::BuildShapeGeometry()
 	geo->DrawArgs["sphere"] = sphereSubmesh;
 	geo->DrawArgs["cylinder"] = cylinderSubmesh;
     geo->DrawArgs["quad"] = quadSubmesh;
-
-	mGeometries[geo->Name] = std::move(geo);
-}
-
-void Engine::LoadSourceModel()
-{
-	std::vector<Animation::SkinnedVertex> vertices;
-	std::vector<std::uint16_t> indices;	
-	int animation_num = Animation_Num;
-
-
-	FBXLoader fbxLoader;
-	fbxLoader.LoadBindPose(bind_pose_filename, vertices, indices,
-		mSkinnedSubsets, mSkinnedMats, source_character.db);
-	source_character.name = "Source_Maximo";
-	source_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
-	//// Prepares playback controller
-	mController.SetTimeRatio(0.0f);
-
-	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
-    const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = source_character.name;
-
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-	std::shared_ptr<Graphics::GpuDefaultBuffer> m_VertexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)vertices.size(), sizeof(Animation::SkinnedVertex), (void*)vertices.data());
-
-	std::shared_ptr<Graphics::GpuDefaultBuffer> m_IndexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)indices.size(), sizeof(std::uint16_t), (void*)indices.data());
-
-	geo->VertexBufferGPU = m_VertexBuffer->GetResource();
-
-	geo->IndexBufferGPU = m_IndexBuffer->GetResource();
-
-	geo->VertexByteStride = sizeof(Animation::SkinnedVertex);
-	geo->VertexBufferByteSize = vbByteSize;
-	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	geo->IndexBufferByteSize = ibByteSize;
-
-	for(UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
-	{
-		SubmeshGeometry submesh;
-		std::string name = "source_sm_" + std::to_string(i);
-		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
-        submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
-        submesh.BaseVertexLocation = 0;
-
-		geo->DrawArgs[name] = submesh;
-	}
+	geo->DrawArgs["line"] = lineSubmesh;
 
 	mGeometries[geo->Name] = std::move(geo);
 }
@@ -1212,16 +1138,20 @@ void Engine::LoadSourceModel()
 void Engine::LoadTargetModel()
 {
 	std::vector<Animation::SkinnedVertex> vertices;
-	std::vector<std::uint16_t> indices;
+	std::vector<std::uint16_t> indices;	
+	int animation_num = Animation_Num;
+
 
 	FBXLoader fbxLoader;
 	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
 		mSkinnedSubsets, mSkinnedMats, target_character.db);
 	target_character.name = "Target_Maximo";
-	target_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
+	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
+
+	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), true);
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
-	const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
+    const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = target_character.name;
@@ -1245,10 +1175,70 @@ void Engine::LoadTargetModel()
 	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
 	geo->IndexBufferByteSize = ibByteSize;
 
-	for (UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
+	for(UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
 	{
 		SubmeshGeometry submesh;
 		std::string name = "target_sm_" + std::to_string(i);
+		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
+        submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
+        submesh.BaseVertexLocation = 0;
+
+		geo->DrawArgs[name] = submesh;
+	}
+
+	mGeometries[geo->Name] = std::move(geo);
+}
+
+void Engine::LoadSourceModel()
+{
+	//// Prepares playback controller
+	mController.SetTimeRatio(0.0f);
+
+	std::vector<Animation::SkinnedVertex> vertices;
+	std::vector<std::uint16_t> indices;
+
+	FBXLoader fbxLoader;
+	fbxLoader.LoadBindPose(bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, source_character.db);
+	source_character.name = "Source_Maximo";
+	source_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
+
+	fbxLoader.LoadFBXClip(mAnimationFilename[2], source_character.db);
+
+	source_character.ik_rig.Init(&source_character.db, &source_character.db.GetBindPose(), true);
+
+	std::string animation_name = source_character.db.GetAnimationClipName(0);
+	sampler.animation = source_character.db.GetAnimationClipByName(animation_name);
+
+	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
+	const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = source_character.name;
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_VertexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)vertices.size(), sizeof(Animation::SkinnedVertex), (void*)vertices.data());
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_IndexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)indices.size(), sizeof(std::uint16_t), (void*)indices.data());
+
+	geo->VertexBufferGPU = m_VertexBuffer->GetResource();
+
+	geo->IndexBufferGPU = m_IndexBuffer->GetResource();
+
+	geo->VertexByteStride = sizeof(Animation::SkinnedVertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	for (UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
+	{
+		SubmeshGeometry submesh;
+		std::string name = "source_sm_" + std::to_string(i);
 		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
 		submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
 		submesh.BaseVertexLocation = 0;
@@ -1307,17 +1297,34 @@ void Engine::BuildRenderItems()
 	mRitemLayer[(int)RenderLayer::Checkboard].push_back(gridRitem.get());
 	mAllRitems.push_back(std::move(gridRitem));
 
-	std::string skeleton_name = source_character.name;
+	//{
+	//	auto lineRitem = std::make_unique<RenderItem>();
+	//	lineRitem->World = MathHelper::Identity4x4();
+	//	//XMStoreFloat4x4(&lineRitem->World, XMMatrixScaling(100.0f, 1.0f, 100.0f) * XMMatrixTranslation(0.0, 0.0, 0.0));
+	//	XMStoreFloat4x4(&lineRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
+	//	lineRitem->ObjCBIndex = objCBIndex++;
+	//	lineRitem->Mat = mMaterials["tile0"].get();
+	//	lineRitem->Geo = mGeometries["shapeGeo"].get();
+	//	lineRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+	//	lineRitem->IndexCount = lineRitem->Geo->DrawArgs["line"].IndexCount;
+	//	lineRitem->StartIndexLocation = lineRitem->Geo->DrawArgs["line"].StartIndexLocation;
+	//	lineRitem->BaseVertexLocation = lineRitem->Geo->DrawArgs["line"].BaseVertexLocation;
+	//	lineRitem->Color = Colors::Red;
+	//	mRitemLayer[(int)RenderLayer::Debug].push_back(lineRitem.get());
+	//	mAllRitems.push_back(std::move(lineRitem));
+	//}
+
+	std::string skeleton_name = target_character.name;
 	if (mGeometries[skeleton_name]!=NULL)
 	{
 		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
 		{
-			std::string submeshName = "source_sm_" + std::to_string(i);
+			std::string submeshName = "target_sm_" + std::to_string(i);
 
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, source_character.scale);
+			XMStoreFloat4x4(&ritem->World, target_character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;
@@ -1336,22 +1343,22 @@ void Engine::BuildRenderItems()
 			//ritem->SkinnedModelInst = mSamplers[0];
 
 			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
-			source_character.ri = ritem.get();
+			target_character.ritems.push_back(ritem.get());
 			mAllRitems.push_back(std::move(ritem));
 		}
 	}
 
-	skeleton_name = target_character.name;
+	skeleton_name = source_character.name;
 	if (mGeometries[skeleton_name] != NULL)
 	{
 		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
 		{
-			std::string submeshName = "target_sm_" + std::to_string(i);
+			std::string submeshName = "source_sm_" + std::to_string(i);
 
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, source_character.scale);
+			XMStoreFloat4x4(&ritem->World, target_character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;
@@ -1366,10 +1373,11 @@ void Engine::BuildRenderItems()
 			// All render items for this solider.m3d instance share
 			// the same skinned model instance.
 			ritem->SkinnedCBIndex = 0;
+			ritem->IsSkinned = true;
 			//ritem->SkinnedModelInst = mSamplers[0];
 
 			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
-			target_character.ri = ritem.get();
+			source_character.ritems.push_back(ritem.get());
 			mAllRitems.push_back(std::move(ritem));
 		}
 	}
@@ -1381,23 +1389,10 @@ void Engine::BuildGUI()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 	//ImGui::StyleColorsClassic();
-
-	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-	//ImGuiStyle& style = ImGui::GetStyle();
-	//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	//{
-	//	//style.WindowRounding = 0.0f;
-	//	//style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-	//}
-
 
 	// Setup Platform/Renderer backends
 	Graphics::GPUDescriptorHeap& cbvsrvuavHeap = Graphics::RenderDevice::GetSingleton().GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -1441,5 +1436,6 @@ void Engine::DrawRenderItems(Graphics::GraphicsContext& graphicsContext, Graphic
 		memcpy(pPerDrawCB, &objConstants, sizeof(ObjectConstants));
 
 		graphicsContext.DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
+
 	}
 }

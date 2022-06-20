@@ -39,13 +39,14 @@
 
 // Utility
 #include "Common/d3dx12.h"
-#include "Common/SimpleMath.h"
+//#include "Common/SimpleMath.h"
 //#include "Common/DxException.h"
 //#include "Common/PathUtil.h"
 #include "Common/d3dUtil.h"
 #include "Common/MathHelper.h"
 #include "Common/Singleton.hpp"
 #include "Common/Debug.h"
+#include "Common/GraphicDebug.h"
 #include "Common/HashUtils.hpp"
 // C++
 #include <array>

@@ -357,6 +357,11 @@ float4 PS(VertexOut pin) : SV_Target
 	diffuseAlbedo = (total % 2.0f) == 0.0f ?
 		float4(0.75f, 0.75f, 0.75f, 1.0f):
 		float4(0.85f, 0.85f, 0.85f, 1.0f);
+	float halfWidth = 0.1f;
+	if (pin.PosW.x > 0 && pin.PosW.z > -halfWidth && pin.PosW.z <= halfWidth) diffuseAlbedo = float4(1.0f, 0.0f, 0.0f, 1.0f);
+	if (pin.PosW.z > 0 && pin.PosW.x > -halfWidth && pin.PosW.x <= halfWidth) diffuseAlbedo = float4(0.0f, 0.0f, 1.0f, 1.0f);
+	if (pin.PosW.x > -halfWidth && pin.PosW.x <= halfWidth && pin.PosW.z > -halfWidth && pin.PosW.z <= halfWidth) diffuseAlbedo = float4(0.0f, 1.0f, 0.0f, 1.0f);
+
 #endif
 	float4 metallic = MetallicFactor;
 	float  roughness = 0.5;

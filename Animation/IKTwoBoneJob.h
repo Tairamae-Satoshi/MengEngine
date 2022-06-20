@@ -29,7 +29,7 @@ namespace Animation
 		// rotation around this axis will open the angle between the two bones. This
 		// in turn also to define which side the two joints must bend. Job validation
 		// will fail if mid_axis isn't normalized.
-		//Vector3 mid_axis;
+		Vector3 mid_axis;
 
 		// Pole vector, in model-space. The pole vector defines the direction the
 		// middle joint should point to, allowing to control IK chain orientation.

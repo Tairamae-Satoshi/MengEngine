@@ -4,6 +4,7 @@
 #include "../Animation/IKAimJob.h"
 #include "../Animation/IKTwoBoneJob.h"
 #include "..//..//Renderer/RenderItem.h"
+#include "..//IKRigging/IKRig.h"
 #include "RootMotion.h"
 #include "CharacterController.h"
 
@@ -16,7 +17,7 @@ namespace Animation
 
 		Transform transform;
 
-		RenderItem* ri;
+		std::vector<RenderItem*> ritems;
 
 		std::string name;
 
@@ -38,10 +39,12 @@ namespace Animation
 
 		LegController leg_controller;
 
+		IKRig ik_rig;
+
 		bool Initialize();
 
 		// Update Final models_ transform
-		void UpdateFinalModelTransform();
+		void UpdateFinalModelTransform(bool isBindpose);
 
 		// Foot two bone ik
 		float foot_ik_weight = 1.0f;
@@ -66,6 +69,8 @@ namespace Animation
 		Vector3 eyes_offset_ = Vector3(0.0f, 0.0f, 0.0f);
 
 		const char* k_joint_names_head[4] = { "Head", "Neck", "Spine2", "Spine1" };
+
+		void UpdateRenderItem();
 
 		void UpdateBlendingMotion(BlendingJob& _blending_job);
 

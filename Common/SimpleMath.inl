@@ -1400,6 +1400,12 @@ inline Vector3 Vector3::TransformVector(const Vector3& v, const Matrix& m) noexc
 	return Vector3(result.x, result.y, result.z);
 }
 
+inline float Vector3::Angle(const Vector3& v1, const Vector3& v2) noexcept
+{
+	using namespace DirectX;
+	return atan2(v1.Cross(v2).Length(), v1.Dot(v2));
+}
+
 /****************************************************************************
  *
  * Vector4

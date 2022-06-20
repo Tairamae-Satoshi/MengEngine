@@ -30,8 +30,6 @@ namespace Animation
 			// Prepares constants
 
 			// Computes inverse matrices required to change to start and mid spaces.
-			// If matrices aren't invertible, they'll be all 0 (ozz::math
-			// implementation), which will result in identity correction quaternions.
 			inv_start_joint = job.start_joint.Invert();
 			Matrix inv_mid_joint = job.mid_joint.Invert();
 
@@ -54,8 +52,6 @@ namespace Animation
 			start_mid_ss_len2 = start_mid_ss.LengthSquared();
 			mid_end_ss_len2 = mid_end_ss.LengthSquared();
 			start_end_ss_len2 = start_end_ss.LengthSquared();
-
-			mid_axis = mid_end_ms.Cross(start_mid_ms).Normalized();
 		}
 
 		// constants
@@ -72,7 +68,7 @@ namespace Animation
 		float mid_end_ss_len2;
 		float start_end_ss_len2;
 
-		Vector3 mid_axis;
+		//Vector3 mid_axis;// Point to right in model space. 
 	};
 
 	// Smoothen target position when it's further that a ratio of the joint chain
@@ -152,11 +148,21 @@ namespace Animation
 		int bent_side_flip = bent_side_ref.Dot(_setup.mid_end_ms) > 0 ? -1 : 1;*/
 		
 		float mid_initial_cos = (start_mid_end_sum_ss_len2 - _setup.start_end_ss_len2) / (2.0f * start_mid_end_ss_len);
+		mid_initial_cos = MathHelper::Clamp(mid_initial_cos, -1.0f, 1.0f);
 
 		float mid_initial_angle = acos(mid_initial_cos);
 		float mid_diff_angle = mid_corrected_angle - mid_initial_angle;
 
-		return Quaternion::CreateFromAxisAngle(_setup.mid_axis, /*bent_side_flip **/ mid_diff_angle);
+		float a = mid_corrected_angle / MathHelper::Pi;
+		float b = mid_initial_angle / MathHelper::Pi;
+
+		//Quaternion q = Quaternion::CreateFromAxisAngle(_job.mid_axis, /*bent_side_flip **/ mid_diff_angle);
+		//char out[50];
+		//sprintf(out, "%f, %f, %f, %f", q.x, q.y, q.z, q.w);
+		//LOG(out);
+
+
+		return Quaternion::CreateFromAxisAngle(_job.mid_axis, /*bent_side_flip **/ mid_diff_angle);
 	}
 
 	Quaternion ComputeStartJoint(const IKTwoBoneJob& _job,
@@ -165,6 +171,9 @@ namespace Animation
 		Vector3 _start_target_ss,
 		float _start_target_ss_len2)
 	{
+		// Pole vector in start joint space (_ss)
+		Vector3 pole_ss = Vector3::TransformVector(_job.pole_vector, _setup.inv_start_joint);
+
 		// start_mid_ss with quaternion mid_rot_ms applied
 		Vector3 mid_end_ms_final = Vector3::Transform(_setup.mid_end_ms, _mid_rot_ms);
 		Vector3 mid_end_model_final = Vector3::TransformVector(mid_end_ms_final, _job.mid_joint) ;
@@ -181,16 +190,13 @@ namespace Animation
 		Quaternion start_rot_ss = end_to_target_rot_ss;
 		if (_start_target_ss_len2 > 0)
 		{
-			// Pole vector in start joint space (_ss)
-			Vector3 pole_ss = mid_end_ss_final;
-
 			// Compute each plane normal
 			Vector3 ref_plane_normal_ss = pole_ss.Cross(_start_target_ss);
 
 			// Compute joint chain plane normal, which is the same as mid joint axis
 			// (same triangle).
 			Vector3 mid_axis_ss = Vector3::TransformVector(
-				Vector3::TransformVector(_setup.mid_axis,
+				Vector3::TransformVector(_job.mid_axis,
 					_job.mid_joint),
 				_setup.inv_start_joint);
 			Vector3 joint_plane_normal_ss = Vector3::Transform(
@@ -204,23 +210,36 @@ namespace Animation
 			// Computes rotation axis, which is either start_target_ss or
 			// -start_target_ss depending on rotation direction.
 			Vector3 rotate_plane_axis_ss = _start_target_ss.Normalized();
-			int start_axis_flip = joint_plane_normal_ss.Dot(pole_ss) < 0 ? 1 : -1;
+			int start_axis_flip = joint_plane_normal_ss.Dot(pole_ss) < 0 ? -1 : 1;
 			Vector3 rotate_plane_axis_flipped_ss = start_axis_flip * rotate_plane_axis_ss;
+
+			Vector3 st = Vector3::TransformVector(_start_target_ss,
+				_job.start_joint);
 
 			// Builds quaternion along rotation axis.
 			Quaternion rotate_plane_ss = Quaternion::CreateFromAxisAngle(
 				rotate_plane_axis_flipped_ss,
 				acos(rotate_plane_cos_angle));
-
+			/*Quaternion rotate_plane_ss = Quaternion::CreateFromAxisAngle(
+				rotate_plane_axis_flipped_ss,
+				0.1f * MathHelper::Pi);*/
+			//char out[50];
+			//sprintf(out, "%f", acos(rotate_plane_cos_angle) / MathHelper::Pi);
+			//LOG(out);
 			if (_job.twist_angle != 0.0f){
 				// If a twist angle is provided, rotation angle is rotated along
 				// rotation plane axis.
 				Quaternion twist_ss = Quaternion::CreateFromAxisAngle(rotate_plane_axis_ss, _job.twist_angle);
 				start_rot_ss = end_to_target_rot_ss * rotate_plane_ss * twist_ss;
+				//start_rot_ss = twist_ss * rotate_plane_ss * end_to_target_rot_ss;
+
 			}
 			else{
 				// Note the order of multiplication
-				start_rot_ss =  end_to_target_rot_ss * rotate_plane_ss ;
+				start_rot_ss = end_to_target_rot_ss * rotate_plane_ss;// FIXUP: the twist must be implemented.
+				//start_rot_ss = rotate_plane_ss * end_to_target_rot_ss;
+				//start_rot_ss = end_to_target_rot_ss;
+
 			}
 		}
 		return start_rot_ss;
@@ -282,7 +301,7 @@ namespace Animation
 		const Quaternion start_rot_ss = ComputeStartJoint(
 			*this, setup, mid_rot_ss, start_target_ss, start_target_ss_len2);
 
-		// Finally apply weigh and output quaternions
+		// Finally apply weight and output quaternions
 		WeightOutput(*this, setup, start_rot_ss, mid_rot_ss);
 
 		return true;

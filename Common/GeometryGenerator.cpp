@@ -655,3 +655,28 @@ GeometryGenerator::MeshData GeometryGenerator::CreateQuad(float x, float y, floa
 
     return meshData;
 }
+
+GeometryGenerator::MeshData GeometryGenerator::CreateLine(float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	MeshData meshData;
+
+	meshData.Vertices.resize(2);
+	meshData.Indices32.resize(2);
+
+	meshData.Vertices[0] = Vertex(
+		x1, y1, z1,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		0.0f, 1.0f);
+
+	meshData.Vertices[1] = Vertex(
+		x2, y2, z2,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		0.0f, 1.0f);
+
+	meshData.Indices32[0] = 0;
+	meshData.Indices32[1] = 1;
+
+	return meshData;
+}

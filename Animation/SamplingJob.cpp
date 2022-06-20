@@ -17,15 +17,13 @@ namespace Animation
 
 	bool SamplingJob::Run()
 	{
-		if (!Validate())
-		{
+		if (!Validate()){
 			return false;
 		}
 
 		int numJoint = animation->mSamples.size();
 		output.resize(numJoint);
-		for (UINT i = 0; i < animation->mSamples.size(); ++i)
-		{
+		for (UINT i = 0; i < animation->mSamples.size(); ++i){
 			animation->mSamples[i].interpolate(ratio, output[i]);
 		}
 
