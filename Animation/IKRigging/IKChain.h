@@ -14,20 +14,26 @@ namespace Animation
 			this->total_length_sqr = this->total_length * this->total_length;
 		}
 
-		unsigned int GetFirstJoint() const
+		int GetFirstJoint() const
 		{
 			return joints[0];
+		}
+
+		int GetLastJoint() const
+		{
+			return joints.back();
 		}
 
 		void SetAlt(Vector3 fwd, Vector3 up, const std::vector<Transform>& tpose_w)
 		{
 			if (!tpose_w.empty()){
-				Quaternion q = tpose_w[GetFirstJoint()].mRot.mValue.Inversed();
+				Quaternion q = tpose_w[joints[0]].mRot.mValue.Inversed();
 
 				this->alt_fwd = Vector3::Transform(fwd, q);
 				this->alt_up = Vector3::Transform(up, q);
 			}
 			else{
+				LOG("Tpose is missing");
 				this->alt_fwd = fwd;
 				this->alt_up = up;
 			}
@@ -53,7 +59,7 @@ namespace Animation
 			this->total_length_sqr = sum * sum;
 		}
 
-		std::vector<unsigned int> joints;
+		std::vector<int> joints;
 
 		std::vector<float> lengths;
 

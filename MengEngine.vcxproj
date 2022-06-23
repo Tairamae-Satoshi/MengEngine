@@ -217,7 +217,6 @@
     <ClCompile Include="Graphics\SwapChain.cpp" />
     <ClCompile Include="Graphics\VariableSizeAllocationsManager.cpp" />
     <ClCompile Include="Animation\LoadFBX.cpp" />
-    <ClCompile Include="Animation\LoadM3d.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="Renderer\GameObject.cpp" />
     <ClCompile Include="Renderer\Material.cpp" />
@@ -326,7 +325,6 @@
     <ClInclude Include="Math\VectorMath.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Animation\LoadFBX.h" />
-    <ClInclude Include="Animation\LoadM3d.h" />
     <ClInclude Include="Renderer\GameObject.h" />
     <ClInclude Include="Renderer\Material.h" />
     <ClInclude Include="Renderer\Mesh.h" />

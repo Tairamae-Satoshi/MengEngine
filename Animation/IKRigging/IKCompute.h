@@ -12,8 +12,8 @@ namespace Animation
 			ik_rig.UpdateWorld();
 
 			Hip(ik_rig, ik_pose);
-			//Limb(ik_rig, ik_rig.chains["leg_l"], ik_pose.leg_l);
-			//Limb(ik_rig, ik_rig.chains["leg_r"], ik_pose.leg_r);
+			Limb(ik_rig, ik_rig.chains["leg_l"], ik_pose.leg_l);
+			Limb(ik_rig, ik_rig.chains["leg_r"], ik_pose.leg_r);
 			Limb(ik_rig, ik_rig.chains["arm_l"], ik_pose.arm_l);
 			Limb(ik_rig, ik_rig.chains["arm_r"], ik_pose.arm_r);
 
@@ -23,6 +23,9 @@ namespace Animation
 			LookTwist(ik_rig, ik_rig.points["hand_l"], ik_pose.hand_l);
 			LookTwist(ik_rig, ik_rig.points["hand_r"], ik_pose.hand_r);
 
+			Spine(ik_rig, ik_rig.chains["spine"], ik_pose.spine);
+
+			LookTwist(ik_rig, ik_rig.points["head"], ik_pose.head);
 		}
 
 	private:
@@ -75,6 +78,11 @@ namespace Animation
 			ik_pose.hip.movement = (curr_pose_w.mTrans.mValue - bind_pose_w.mTrans.mValue); // How much movement did the hip do between Bind and Animated.
 			ik_pose.hip.dir = pose_fwd; // Pose Forward is the direction we want the Hip to Point to.
 			ik_pose.hip.twist = twist; // How Much Twisting to Apply after pointing in the correct direction.
+
+			//ik_rig.skeleton->graphic_debug->DrawLine(ik_rig.pose_world[b_idx].mTrans.mValue * 0.05f + Vector3(5.0f, 0.0f, 0.0f), pose_fwd, 3.0f, Vector4(Colors::Blue));
+			//ik_rig.skeleton->graphic_debug->DrawLine(ik_rig.pose_world[b_idx].mTrans.mValue * 0.05f + Vector3(5.0f, 0.0f, 0.0f), pose_up, 8.0f, Vector4(Colors::Red));
+
+
 		}
 
 		static void Limb(const IKRig& ik_rig, const IKChain& ik_chain, LimbIKData& ik_limb)
@@ -109,8 +117,19 @@ namespace Animation
 			Vector3 lft_dir = j_dir.Cross(ab_dir);
 			ik_limb.joint_dir = ab_dir.Cross(lft_dir).Normalized();
 
-			ik_limb.mid_axis = -lft_dir.Normalized();
-			ik_limb.pole = (joint_end_w.mTrans.mValue - joint_mid_w.mTrans.mValue).Normalized();
+			//ik_limb.mid_axis = Vector3::Transform(-ik_chain.alt_up.Cross(ik_chain.alt_fwd), joint_start_w.mRot.mValue);
+			//ik_limb.mid_axis = Vector3::Transform(-ik_limb.mid_axis, joint_mid_w.mRot.mValue.Inversed());
+			ik_limb.mid_axis = Vector3::Transform(-lft_dir.Normalized(), joint_mid_w.mRot.mValue.Inversed());
+			ik_limb.mid_axis = Vector3::Transform(ik_limb.mid_axis, (*ik_rig.tpose)[ik_chain.joints[1]].mRot.mValue);
+			//ik_limb.mid_axis = -lft_dir.Normalized();
+
+			ik_limb.pole = Vector3::Transform(ik_chain.alt_fwd, joint_mid_w.mRot.mValue); ;
+
+			//ik_limb.pole = (joint_end_w.mTrans.mValue - joint_mid_w.mTrans.mValue).Normalized();
+			//ik_limb.pole = j_dir.Normalized();
+			ik_limb.debug_mid_axis = -lft_dir.Normalized();
+			// Debug
+			//ik_rig.skeleton->graphic_debug->DrawLine(joint_mid_w.mTrans.mValue*0.05f+ Vector3(-5.0f, 0.0f, 0.0f), -lft_dir.Normalized(), 10.0f, Vector4(Colors::Red));
 		}
 
 		static void LookTwist(const IKRig& ik_rig, const IKPoint& ik_point, LookTwistIKData& ik_lt) {
@@ -128,6 +147,37 @@ namespace Animation
 
 			ik_lt.look_dir = std::move(curr_look_dir_w);
 			ik_lt.twist_dir = std::move(curr_twist_dir_w);
+
+			//ik_rig.skeleton->graphic_debug->DrawLine(curr_pose_w.mTrans.mValue * 0.05f + Vector3(-5.0f, 0.0f, 0.0f), ik_lt.look_dir, 10.0f, Vector4(Colors::Yellow));
+		}
+
+		static void Spine(const IKRig& ik_rig, const IKChain& ik_chain, std::vector<LookTwistIKData>& ik_lts)
+		{
+			std::vector<int> idxs = { ik_chain.GetFirstJoint(), ik_chain.GetLastJoint() };
+			const Vector3 look_dir = Vector3::Transform(ik_chain.alt_fwd, ik_rig.tpose_world[ik_chain.GetFirstJoint()].mRot.mValue);
+			const Vector3 twist_dir = Vector3::Transform(ik_chain.alt_up, ik_rig.tpose_world[ik_chain.GetFirstJoint()].mRot.mValue);
+
+			ik_lts.clear();		
+			for (auto idx : idxs)
+			{
+				const Transform& bind_pose_w = ik_rig.tpose_world[idx];
+				const Transform& curr_pose_w = ik_rig.pose_world[idx];
+
+				Quaternion q_inv = bind_pose_w.mRot.mValue.Inversed();
+				Vector3 curr_look_dir = Vector3::Transform(look_dir, q_inv); // In local space 
+				Vector3 curr_twist_dir = Vector3::Transform(twist_dir, q_inv);
+
+				curr_look_dir = Vector3::Transform(curr_look_dir, curr_pose_w.mRot.mValue); // In model space
+				curr_twist_dir = Vector3::Transform(curr_twist_dir, curr_pose_w.mRot.mValue);
+
+				// Debug
+				//ik_rig.skeleton->graphic_debug->DrawLine(curr_pose_w.mTrans.mValue * 0.05f + Vector3(-5.0f, 0.0f, 0.0f), curr_twist_dir, 3.0f, Vector4(Colors::Red));
+
+				LookTwistIKData ik_lt;
+				ik_lt.look_dir = curr_look_dir;
+				ik_lt.twist_dir = curr_twist_dir;
+				ik_lts.push_back(std::move(ik_lt));
+			}
 		}
 	};
 }

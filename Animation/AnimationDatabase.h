@@ -83,6 +83,8 @@ namespace Animation
 
 		std::vector<int> mJointHierarchy;
 
+		GraphicDebug* graphic_debug;
+
 	private:
 		// Gives parentIndex of ith bone.
 

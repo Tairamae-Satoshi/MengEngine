@@ -156,12 +156,6 @@ namespace Animation
 		float a = mid_corrected_angle / MathHelper::Pi;
 		float b = mid_initial_angle / MathHelper::Pi;
 
-		//Quaternion q = Quaternion::CreateFromAxisAngle(_job.mid_axis, /*bent_side_flip **/ mid_diff_angle);
-		//char out[50];
-		//sprintf(out, "%f, %f, %f, %f", q.x, q.y, q.z, q.w);
-		//LOG(out);
-
-
 		return Quaternion::CreateFromAxisAngle(_job.mid_axis, /*bent_side_flip **/ mid_diff_angle);
 	}
 
@@ -204,13 +198,12 @@ namespace Animation
 				end_to_target_rot_ss);
 
 			// Computes angle cosine between 2 normalized normals
-			float rotate_plane_cos_angle = ref_plane_normal_ss.Normalized().Dot(
-				joint_plane_normal_ss.Normalized());
+			float rotate_plane_angle = Vector3::Angle(ref_plane_normal_ss, joint_plane_normal_ss);
 
 			// Computes rotation axis, which is either start_target_ss or
 			// -start_target_ss depending on rotation direction.
 			Vector3 rotate_plane_axis_ss = _start_target_ss.Normalized();
-			int start_axis_flip = joint_plane_normal_ss.Dot(pole_ss) < 0 ? -1 : 1;
+			int start_axis_flip = joint_plane_normal_ss.Dot(pole_ss) > 0 ? -1 : 1;
 			Vector3 rotate_plane_axis_flipped_ss = start_axis_flip * rotate_plane_axis_ss;
 
 			Vector3 st = Vector3::TransformVector(_start_target_ss,
@@ -219,26 +212,18 @@ namespace Animation
 			// Builds quaternion along rotation axis.
 			Quaternion rotate_plane_ss = Quaternion::CreateFromAxisAngle(
 				rotate_plane_axis_flipped_ss,
-				acos(rotate_plane_cos_angle));
-			/*Quaternion rotate_plane_ss = Quaternion::CreateFromAxisAngle(
-				rotate_plane_axis_flipped_ss,
-				0.1f * MathHelper::Pi);*/
-			//char out[50];
-			//sprintf(out, "%f", acos(rotate_plane_cos_angle) / MathHelper::Pi);
-			//LOG(out);
+				rotate_plane_angle);
+
 			if (_job.twist_angle != 0.0f){
 				// If a twist angle is provided, rotation angle is rotated along
 				// rotation plane axis.
 				Quaternion twist_ss = Quaternion::CreateFromAxisAngle(rotate_plane_axis_ss, _job.twist_angle);
 				start_rot_ss = end_to_target_rot_ss * rotate_plane_ss * twist_ss;
-				//start_rot_ss = twist_ss * rotate_plane_ss * end_to_target_rot_ss;
-
 			}
 			else{
-				// Note the order of multiplication
-				start_rot_ss = end_to_target_rot_ss * rotate_plane_ss;// FIXUP: the twist must be implemented.
+				// FIXME: Note the order of multiplication
+				start_rot_ss = end_to_target_rot_ss * rotate_plane_ss;
 				//start_rot_ss = rotate_plane_ss * end_to_target_rot_ss;
-				//start_rot_ss = end_to_target_rot_ss;
 
 			}
 		}

@@ -90,10 +90,20 @@ namespace Animation
 
 			pose_world.clear();
 			for (auto m : ltmJob.output) {
-				Transform t;
-				m.Decompose(t.mScale.mValue, t.mRot.mValue, t.mTrans.mValue);
-				pose_world.push_back(t);
+				pose_world.push_back(Transform::FromMatrix(m));
 			}
+
+			/*int jointNum = skeleton->JointCount();
+			for (UINT i = 1; i < jointNum; ++i)
+			{
+				Quaternion rotation = this->pose[i].mRot.mValue;
+
+				int parentIndex = skeleton->GetJointParentIndex(i);
+
+				Quaternion q = rotation * pose_world[parentIndex].mRot.mValue;
+				Quaternion q1 = pose_world[i].mRot.mValue;
+				pose_world[i].mRot.mValue = rotation * pose_world[parentIndex].mRot.mValue;
+			}*/
 
 		}
 
@@ -117,17 +127,21 @@ namespace Animation
 
 			this->AddChain("spine", { "Spine", "Spine1", "Spine2" }, "", "");
 
-			this->points["foot_l"].SetAlt(Vector3::Forward, Vector3::Up, *this->tpose); // Look = Fwd, Twist = Up
-			this->points["foot_r"].SetAlt(Vector3::Forward, Vector3::Up, *this->tpose); // Look = Fwd, Twist = Up
+			this->points["head"].SetAlt(Vector3::Forward, Vector3::Up, tpose_world); // Look = Fwd, Twist = Up
 
-			this->points["hand_l"].SetAlt(Vector3::Down, Vector3::Right, *this->tpose); // Look = Fwd, Twist = Up
-			this->points["hand_r"].SetAlt(Vector3::Down, Vector3::Left, *this->tpose); // Look = Fwd, Twist = Up
+			this->points["foot_l"].SetAlt(Vector3::Forward, Vector3::Up, tpose_world); // Look = Fwd, Twist = Up
+			this->points["foot_r"].SetAlt(Vector3::Forward, Vector3::Up, tpose_world); // Look = Fwd, Twist = Up
 
-			this->chains["leg_l"].SetAlt(Vector3::Down, Vector3::Forward, *this->tpose);
-			this->chains["leg_r"].SetAlt(Vector3::Down, Vector3::Forward, *this->tpose);
-			this->chains["arm_l"].SetAlt(Vector3::Right, Vector3::Backward, *this->tpose);
-			this->chains["arm_r"].SetAlt(Vector3::Left, Vector3::Backward, *this->tpose);
+			this->points["hand_l"].SetAlt(Vector3::Down, Vector3::Right, tpose_world); // Look = Down, Twist = Right
+			this->points["hand_r"].SetAlt(Vector3::Down, Vector3::Left, tpose_world); // Look = Down, Twist = Left
 
+			this->chains["leg_l"].SetAlt(Vector3::Down, Vector3::Forward, tpose_world); // Look = Forward, Twist = Down
+			this->chains["leg_r"].SetAlt(Vector3::Down, Vector3::Forward, tpose_world);
+
+			this->chains["arm_l"].SetAlt(Vector3::Right, Vector3::Backward, tpose_world); 
+			this->chains["arm_r"].SetAlt(Vector3::Left, Vector3::Backward, tpose_world);
+
+			this->chains["spine"].SetAlt(Vector3::Up, Vector3::Forward, tpose_world); // Look = Up, Twist = Forward
 		}
 
 		const std::vector<Transform>* tpose;

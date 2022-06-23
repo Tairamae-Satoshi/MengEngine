@@ -149,9 +149,10 @@ private:
 	enum { Animation_Num = 9 };
 	
 	const std::string bind_pose_filename = "Contents/Models/Models/xbot.fbx";
-	const std::string target_bind_pose_filename = "Contents/Models/Models/xbot.fbx";
-	//Ch36_nonPBR
-	//NPBRGirl
+	const std::string target_bind_pose_filename = "Contents/Models/Models/NPBRGirl.fbx";
+	// Ch36_nonPBR
+	// NPBRGirl
+	// Ch24_nonPBR
 
 	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
@@ -1148,6 +1149,8 @@ void Engine::LoadTargetModel()
 	target_character.name = "Target_Maximo";
 	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
 
+	target_character.db.graphic_debug = &graphic_debug;
+
 	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), true);
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
@@ -1202,6 +1205,7 @@ void Engine::LoadSourceModel()
 		mSkinnedSubsets, mSkinnedMats, source_character.db);
 	source_character.name = "Source_Maximo";
 	source_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
+	source_character.db.graphic_debug = &graphic_debug;
 
 	fbxLoader.LoadFBXClip(mAnimationFilename[2], source_character.db);
 
