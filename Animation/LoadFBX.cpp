@@ -256,8 +256,8 @@ void FBXLoader::InitMesh(UINT MeshIndex,
 
 		vertices[vertexIndex + i].Pos = XMFLOAT3(Pos.x, Pos.y, Pos.z);
 		vertices[vertexIndex + i].Normal = XMFLOAT3(Normal.x, Normal.y, Normal.z);
-		vertices[vertexIndex + i].TangentU = XMFLOAT3(Tangent.x, Tangent.y, Tangent.z);
-		vertices[vertexIndex + i].TexC = XMFLOAT2(TexCoord.x, TexCoord.y);
+		if (paiMesh->HasTangentsAndBitangents()) vertices[vertexIndex + i].TangentU = XMFLOAT3(Tangent.x, Tangent.y, Tangent.z);
+		if (paiMesh->HasTextureCoords(0)) vertices[vertexIndex + i].TexC = XMFLOAT2(TexCoord.x, TexCoord.y);
 	}
 
 	LoadBones(MeshIndex, paiMesh, subsets, vertices, indices);

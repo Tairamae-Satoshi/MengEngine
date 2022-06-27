@@ -158,6 +158,12 @@
     <ClCompile Include="Animation\Character\Character.cpp" />
     <ClCompile Include="Animation\Character\CharacterController.cpp" />
     <ClCompile Include="Animation\IKAimJob.cpp" />
+    <ClCompile Include="Animation\IKRigging\IKChain.cpp" />
+    <ClCompile Include="Animation\IKRigging\IKCompute.cpp" />
+    <ClCompile Include="Animation\IKRigging\IKPoint.cpp" />
+    <ClCompile Include="Animation\IKRigging\IKPose.cpp" />
+    <ClCompile Include="Animation\IKRigging\IKRig.cpp" />
+    <ClCompile Include="Animation\IKThreeBoneJob.cpp" />
     <ClCompile Include="Animation\IKTwoBoneJob.cpp" />
     <ClCompile Include="Animation\LegController.cpp" />
     <ClCompile Include="Animation\LocalToModelJob.cpp" />
@@ -240,6 +246,7 @@
     <ClInclude Include="Animation\IKRigging\IKPoint.h" />
     <ClInclude Include="Animation\IKRigging\IKPose.h" />
     <ClInclude Include="Animation\IKRigging\IKRig.h" />
+    <ClInclude Include="Animation\IKThreeBoneJob.h" />
     <ClInclude Include="Animation\IKTwoBoneJob.h" />
     <ClInclude Include="Animation\Interpolator.h" />
     <ClInclude Include="Animation\LegController.h" />

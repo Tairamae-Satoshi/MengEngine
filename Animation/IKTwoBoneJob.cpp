@@ -173,7 +173,7 @@ namespace Animation
 		Vector3 mid_end_model_final = Vector3::TransformVector(mid_end_ms_final, _job.mid_joint) ;
 		Vector3 mid_end_ss_final = Vector3::TransformVector(mid_end_model_final, _setup.inv_start_joint) ;
 		Vector3 start_end_ss_final = _setup.start_mid_ss + mid_end_ss_final;
-		Vector3 start_end_ms_final = _setup.start_mid_ms + mid_end_ms_final;
+		//Vector3 start_end_ms_final = _setup.start_mid_ms + mid_end_ms_final;
 
 		// Quaternion for rotating the effector onto the target
 		Quaternion end_to_target_rot_ss = Quaternion::CreateFromVectors(start_end_ss_final.Normalized(), _start_target_ss.Normalized());
@@ -206,8 +206,8 @@ namespace Animation
 			int start_axis_flip = joint_plane_normal_ss.Dot(pole_ss) > 0 ? -1 : 1;
 			Vector3 rotate_plane_axis_flipped_ss = start_axis_flip * rotate_plane_axis_ss;
 
-			Vector3 st = Vector3::TransformVector(_start_target_ss,
-				_job.start_joint);
+			/*Vector3 st = Vector3::TransformVector(_start_target_ss,
+				_job.start_joint);*/
 
 			// Builds quaternion along rotation axis.
 			Quaternion rotate_plane_ss = Quaternion::CreateFromAxisAngle(

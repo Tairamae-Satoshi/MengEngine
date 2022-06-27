@@ -54,7 +54,7 @@ namespace Animation
 		float weight;
 
 		// Local mid_intial_rot
-		Quaternion mid_initial_rot;
+		//Quaternion mid_initial_rot;
 
 		// Model-space matrices of the start, middle and end joints of the chain.
 		// The 3 joints should be ancestors. They don't need to be direct

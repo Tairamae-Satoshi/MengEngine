@@ -63,7 +63,8 @@ private:
 	void UpdateShadowPerPassCB(const GameTimer& gt);
 
     void BuildShapeGeometry();
-	void LoadTargetModel();
+	void LoadTargetAModel();
+	void LoadTargetBModel();
 	void LoadSourceModel();
     void BuildMaterials();
     void BuildRenderItems();
@@ -149,10 +150,11 @@ private:
 	enum { Animation_Num = 9 };
 	
 	const std::string bind_pose_filename = "Contents/Models/Models/xbot.fbx";
-	const std::string target_bind_pose_filename = "Contents/Models/Models/NPBRGirl.fbx";
+	const std::string target_bind_pose_filename = "Contents/Models/Models/Tyrannosaurus.fbx";
 	// Ch36_nonPBR
 	// NPBRGirl
 	// Ch24_nonPBR
+	// Tyrannosaurus
 
 	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
@@ -562,7 +564,8 @@ bool Engine::Initialize()
 	mCamera.LookAt(Vector3(0.0f, 25.0f, -50.0f), Vector3(0.0f, 0.0f, 1.0f), Vector3(0.0f, 1.0f, 0.0f));
 
 	LoadSourceModel();
-	LoadTargetModel();
+	//LoadTargetAModel();
+	LoadTargetBModel();
 	BuildShapeGeometry();
 	BuildMaterials();
 	BuildRenderItems();
@@ -777,10 +780,6 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 	
 	mController.Update(sampler.animation->get_duration_in_second(), gt.DeltaTime());
 
-	//blender.t = mController.GetTimeRatio();
-	//blender.deltaT = mController.GetDeltaTime();
-	//character.UpdateController(gt.DeltaTime());
-	//character.UpdateBlendingMotion(blender);
 	sampler.ratio = mController.GetTimeRatio();;
 	sampler.Run();
 	source_character.locals = sampler.output;
@@ -1136,7 +1135,64 @@ void Engine::BuildShapeGeometry()
 	mGeometries[geo->Name] = std::move(geo);
 }
 
-void Engine::LoadTargetModel()
+void Engine::LoadTargetAModel()
+{
+	std::vector<Animation::SkinnedVertex> vertices;
+	std::vector<std::uint16_t> indices;
+	int animation_num = Animation_Num;
+
+
+	FBXLoader fbxLoader;
+	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, target_character.db);
+	target_character.name = "Target_Maximo";
+	target_character.transform.mScale.mValue = Vector3(0.05f, 0.05f, 0.05f);
+	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
+
+	target_character.db.graphic_debug = &graphic_debug;
+
+	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), true);
+
+	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
+	const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = target_character.name;
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_VertexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)vertices.size(), sizeof(Animation::SkinnedVertex), (void*)vertices.data());
+
+	std::shared_ptr<Graphics::GpuDefaultBuffer> m_IndexBuffer = std::make_shared<Graphics::GpuDefaultBuffer>((UINT)indices.size(), sizeof(std::uint16_t), (void*)indices.data());
+
+	geo->VertexBufferGPU = m_VertexBuffer->GetResource();
+
+	geo->IndexBufferGPU = m_IndexBuffer->GetResource();
+
+	geo->VertexByteStride = sizeof(Animation::SkinnedVertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	for (UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
+	{
+		SubmeshGeometry submesh;
+		std::string name = "target_sm_" + std::to_string(i);
+		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
+		submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
+		submesh.BaseVertexLocation = 0;
+
+		geo->DrawArgs[name] = submesh;
+	}
+
+	mGeometries[geo->Name] = std::move(geo);
+}
+
+void Engine::LoadTargetBModel()
 {
 	std::vector<Animation::SkinnedVertex> vertices;
 	std::vector<std::uint16_t> indices;	
@@ -1147,11 +1203,37 @@ void Engine::LoadTargetModel()
 	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
 		mSkinnedSubsets, mSkinnedMats, target_character.db);
 	target_character.name = "Target_Maximo";
+	target_character.transform.mScale.mValue = Vector3(0.02f, 0.02f, 0.02f);
 	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
 
 	target_character.db.graphic_debug = &graphic_debug;
 
-	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), true);
+	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), false);
+	{
+		// Init Ik Rig
+		target_character.ik_rig.AddPoint("hip", "hip");
+
+		target_character.ik_rig.AddPoint("head", "head");
+		target_character.ik_rig.AddPoint("neck", "neck");
+		target_character.ik_rig.AddPoint("chest", "chest");
+		target_character.ik_rig.AddPoint("foot_l", "lFoot");
+		target_character.ik_rig.AddPoint("foot_r", "rFoot");
+
+		target_character.ik_rig.AddChain("leg_r", { "rThigh", "rShin", "rAnkle" }, "rFoot", "ThreeBone");
+		target_character.ik_rig.AddChain("leg_l", { "lThigh", "lShin", "lAnkle" }, "lFoot", "ThreeBone");
+
+		//target_character.ik_rig.AddChain("spine", { "Spine", "Spine1", "Spine2" }, "", ""); // TODO
+
+		target_character.ik_rig.points["head"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+
+		target_character.ik_rig.points["foot_l"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+		target_character.ik_rig.points["foot_r"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+
+		target_character.ik_rig.chains["leg_l"].SetAlt(Vector3::Down, Vector3::Forward, target_character.ik_rig.tpose_world); // Look = Forward, Twist = Down
+		target_character.ik_rig.chains["leg_r"].SetAlt(Vector3::Down, Vector3::Forward, target_character.ik_rig.tpose_world);
+
+		//target_character.ik_rig.chains["spine"].SetAlt(Vector3::Up, Vector3::Forward, target_character.ik_rig.tpose_world); // Look = Up, Twist = Forward
+	}
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
     const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
@@ -1204,6 +1286,7 @@ void Engine::LoadSourceModel()
 	fbxLoader.LoadBindPose(bind_pose_filename, vertices, indices,
 		mSkinnedSubsets, mSkinnedMats, source_character.db);
 	source_character.name = "Source_Maximo";
+	source_character.transform.mScale.mValue = Vector3(0.05f, 0.05f, 0.05f);
 	source_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
 	source_character.db.graphic_debug = &graphic_debug;
 

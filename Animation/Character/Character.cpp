@@ -66,7 +66,7 @@ namespace Animation
 		ik_job.weight = foot_ik_weight;
 		ik_job.soften = foot_ik_soften;
 		ik_job.twist_angle = 0.0f;
-		ik_job.mid_initial_rot = locals[leg.knee].mRot.mValue;
+		//ik_job.mid_initial_rot = locals[leg.knee].mRot.mValue;
 		ik_job.start_joint = models[leg.hip];
 		ik_job.mid_joint = models[leg.knee];
 		ik_job.end_joint = models[leg.ankle];
@@ -90,7 +90,7 @@ namespace Animation
 				std::end(models),
 				&ri->skinnedConstant.BoneTransforms[0]);
 
-			XMMATRIX m = XMMatrixScaling(0.05f, 0.05f, 0.05f);
+			XMMATRIX m = XMMatrixScaling(transform.mScale.mValue.x, transform.mScale.mValue.y, transform.mScale.mValue.z);
 			m *= XMMatrixRotationQuaternion(transform.mRot.mValue);
 			m *= XMMatrixTranslationFromVector(transform.mTrans.mValue);
 			XMStoreFloat4x4(&ri->World, m);
