@@ -1,6 +1,7 @@
 #pragma once
 #include "..//..//pch.h"
 #include "..//LocalToModelJob.h"
+#include "..//SpringBoneJob.h"
 #include "IKChain.h"
 #include "IKPoint.h"
 
@@ -14,6 +15,8 @@ namespace Animation
 		void AddPoint(std::string point_name, std::string joint_name);
 
 		void AddChain(std::string chain_name, std::vector<std::string> joint_names, std::string end_name, std::string solver);
+
+		void AddSpringBoneChain(std::string chain_name, std::vector<std::string> joint_names);
 
 		void UpdateWorld();
 
@@ -30,6 +33,8 @@ namespace Animation
 		std::map<std::string, IKChain> chains; // The joint index of bone chains, usually limbs / spine / hair / tail
 
 		std::map<std::string, IKPoint> points; // Main single bones of the rig, like head / hip / chest
+
+		std::map<std::string, SpringBoneJob> spring_bones;
 
 		AnimationDatabase* skeleton;
 

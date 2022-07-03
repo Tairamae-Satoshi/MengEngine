@@ -2,7 +2,7 @@
 
 namespace Animation
 {
-	void IKPose::ApplyRig(IKRig& rig)
+	void IKPose::ApplyRig(IKRig& rig, float dt)
 	{
 		rig.pose = *rig.tpose;
 		rig.UpdateWorld();
@@ -14,6 +14,8 @@ namespace Animation
 			this->ApplySpine(rig, rig.chains["spine"], spine);
 			rig.UpdateWorld();
 		}
+
+		if (rig.chains.find("tail") != rig.chains.end()) this->ApplySpringBone(rig, rig.chains["tail"], rig.spring_bones["tail"], dt);
 
 		this->ApplyLimb(rig, rig.chains["leg_l"], leg_l);
 		this->ApplyLimb(rig, rig.chains["leg_r"], leg_r);
@@ -254,7 +256,7 @@ namespace Animation
 			Vector3 alt_twist = ik_chain.alt_up;
 
 			Transform c_tran_w = p_tran_w;
-			c_tran_w.Add(bind_pose_l);
+			c_tran_w = c_tran_w.Add(bind_pose_l);
 
 			Vector3 cur_look = Vector3::Transform(alt_look, c_tran_w.mRot.mValue);
 
@@ -270,7 +272,7 @@ namespace Animation
 			ik_rig.pose[idx].mRot.mValue = rot;
 
 			if (t != 1.0f) {
-				p_tran_w.Add(ik_rig.pose[idx]);
+				p_tran_w = p_tran_w.Add(ik_rig.pose[idx]);
 			}
 
 			//ik_rig.UpdateWorld();
@@ -328,4 +330,72 @@ namespace Animation
 		//ik_rig.skeleton->graphic_debug->DrawLine(c_w.mTrans.mValue * 0.05f + Vector3(5.0f, 0.0f, 0.0f), ik_lt.twist_dir, 3.0f, Vector4(Colors::Blue));
 
 	}
+
+	bool IsVector3Equal(const Vector3& a, const Vector3& b)
+	{
+		return (a - b).LengthSquared() < 1e-6 ? true : false;
+	}
+
+	void IKPose::ApplySpringBone(IKRig& ik_rig, const IKChain& ik_chain, SpringBoneJob& spring_bone, float dt)
+	{
+		char out[50];
+		sprintf(out, "%f", dt);
+		LOG(out);
+
+		if (!spring_bone.is_pos_reset)
+		{
+			spring_bone.Reset(ik_rig.pose_world);
+			spring_bone.is_pos_reset = true;
+		}
+
+		Transform p_tran_w = ik_rig.pose_world[ik_rig.skeleton->GetJointParentIndex(ik_chain.GetFirstJoint())];
+		spring_bone.parent_w_t = p_tran_w;
+
+		std::vector<Transform> joints_tran_l;
+		for (auto idx : ik_chain.joints){
+			joints_tran_l.push_back(ik_rig.pose[idx]);
+		}
+		spring_bone.joints_l_t = joints_tran_l;
+		//spring_bone.Run(dt);
+		for (int i = 0; i < spring_bone.joints.size(); i++)
+		{
+			spring_bone.joint_correction_l_t[i] = spring_bone.joints_l_t[i];
+		}
+
+		for (int i = 0; i < spring_bone.joints.size() - 1; i++)
+		{
+			Transform joint_w_t = spring_bone.parent_w_t.Add(spring_bone.joints_l_t[i]);
+
+			float bone_len = spring_bone.joints_l_t[i + 1].mTrans.mValue.Length();
+			Vector3 tail = Vector3(0.0f, 0.0f, bone_len);
+			tail = Vector3::Transform(tail, Transform::ToMatrix(joint_w_t));
+
+			//Vector3 pos = spring_bone.joints[i].spring.position;
+			//Vector3 pos_w = Vector3::Transform(Vector3(0.0f, 0.0f, -bone_len), Transform::ToMatrix(ik_rig.pose_world[spring_bone.joints[i].idx]));
+			spring_bone.joints[i].spring.Update(dt, tail);
+			Vector3 spring_pos = spring_bone.joints[i].spring.position;
+
+			Vector3 resting_dir = (tail - joint_w_t.mTrans.mValue).Normalized(); // Dir to resting position
+			Vector3 spring_dir = (spring_pos - joint_w_t.mTrans.mValue).Normalized(); // Dir to spring position
+			//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 1.0f, 0.0f), resting_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Red));
+			//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 0.0f, 0.0f), spring_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Blue));
+
+			Quaternion rot = IsVector3Equal(resting_dir, spring_dir) ? Quaternion::Identity : Quaternion::CreateFromVectors(resting_dir, spring_dir);
+			Quaternion temp = rot;
+			rot = joint_w_t.mRot.mValue * rot * spring_bone.parent_w_t.mRot.mValue.Inversed();
+
+			spring_bone.joint_correction_l_t[i].mRot.mValue = rot;
+			float w = rot.w;
+			spring_bone.parent_w_t = spring_bone.parent_w_t.Add(spring_bone.joint_correction_l_t[i]);
+			//LOG("1");
+		}
+
+		for (int i = 0; i < ik_chain.joints.size(); i++) {
+			int idx = ik_chain.joints[i];
+			ik_rig.pose[idx] = spring_bone.joint_correction_l_t[i];
+			//ik_rig.pose[idx].mRot.mValue = Quaternion::CreateFromAxisAngle(Vector3(0, 1, 0), MathHelper::Pi * 0.05f);
+		}
+
+	}
+
 }

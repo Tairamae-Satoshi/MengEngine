@@ -75,6 +75,33 @@ namespace Animation
 		this->chains[chain_name] = std::move(ch);
 	}
 
+	void IKRig::AddSpringBoneChain(std::string chain_name, std::vector<std::string> joint_names)
+	{
+		int found = 0;
+		IKChain ch;
+
+		for (int i = 0; i < skeleton->JointCount() && found != joint_names.size(); i++)
+		{
+			std::string jointName = skeleton->GetJointName(i);
+
+			if (jointName.find(joint_names[found]) != jointName.npos)
+			{
+				ch.AddBone(i, 0); // TODO: Add length
+				++found;
+			}
+
+		}
+
+		ch.ik_solver = "SpringBone";
+		ch.ComputeLen(tpose_world);
+		this->chains[chain_name] = std::move(ch);
+
+		SpringBoneJob spring_bone;
+		spring_bone.Init(this->chains[chain_name].joints);
+		spring_bones[chain_name] = spring_bone;
+	}
+
+
 	void IKRig::UpdateWorld()
 	{
 		LocalToModelJob ltmJob;

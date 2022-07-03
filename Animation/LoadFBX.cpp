@@ -285,7 +285,7 @@ void FBXLoader::LoadBones(UINT MeshIndex,
 	{
 		UINT BoneIndex = 0;
 		std::string BoneName(pMesh->mBones[i]->mName.data);
-
+		LOG(BoneName);
 		if (m_BoneMapping.find(BoneName) == m_BoneMapping.end())
 		{
 			// Allocate an index for a new bone
@@ -413,7 +413,7 @@ void FBXLoader::CreateSkeletonHierachy(const aiScene* scene)
 void FBXLoader::BuildNodeMappingWithBone(aiNode* node, const aiScene* scene)
 {
 	necessityMap[node->mName.data] = false;
-	Debug::Log(LOG_LEVEL::LOG_LEVEL_INFO, "BuildNodeMappingWithBone", "MotionAnalyzer", 411, node->mName.data);
+	LOG(node->mName.data);
 
 	for (UINT i = 0; i < node->mNumChildren; i++)
 	{

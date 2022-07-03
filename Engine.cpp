@@ -150,11 +150,13 @@ private:
 	enum { Animation_Num = 9 };
 	
 	const std::string bind_pose_filename = "Contents/Models/Models/xbot.fbx";
-	const std::string target_bind_pose_filename = "Contents/Models/Models/Tyrannosaurus.fbx";
+	const std::string targetA_bind_pose_filename = "Contents/Models/Models/NPBRGirl.fbx";
+	const std::string targetB_bind_pose_filename = "Contents/Models/Models/Tyrannosaurus.fbx";
 	// Ch36_nonPBR
 	// NPBRGirl
 	// Ch24_nonPBR
 	// Tyrannosaurus
+	// Raptor
 
 	// Data for motion matching
 	const std::string mAnimationFilename[Animation_Num] =
@@ -170,24 +172,11 @@ private:
 		"Contents/Models/Locomotion/right strafe.fbx"
 	};
 
-
-	//const std::string bind_pose_filename = "Contents/Models/Standard Idle.fbx";
-
-	//const std::string mAnimationFilename[Animation_Num] =
-	//{
-	//	"Contents/Models/Female Basic Locomotion Pack/idle.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/walking.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/running.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/left strafe walk.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/right strafe walk.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/left strafe.fbx",
-	//	"Contents/Models/Female Basic Locomotion Pack/right strafe.fbx",
-	//};
-
 	MotionAnalyzer analyzer[Animation_Num];
 	PlaybackController mController;
 	Character source_character;
-	Character target_character;
+	Character targetA_character;
+	Character targetB_character;
 
 	IKPose ik_pose;
 
@@ -564,7 +553,7 @@ bool Engine::Initialize()
 	mCamera.LookAt(Vector3(0.0f, 25.0f, -50.0f), Vector3(0.0f, 0.0f, 1.0f), Vector3(0.0f, 1.0f, 0.0f));
 
 	LoadSourceModel();
-	//LoadTargetAModel();
+	LoadTargetAModel();
 	LoadTargetBModel();
 	BuildShapeGeometry();
 	BuildMaterials();
@@ -788,14 +777,20 @@ void Engine::UpdateSkinnedCBs(void* perPassCB, const GameTimer& gt)
 	source_character.ik_rig.pose = source_character.locals;
 	IKCompute::Run(source_character.ik_rig, ik_pose);
 
-	ik_pose.ApplyRig(target_character.ik_rig);
-	target_character.locals = target_character.ik_rig.pose;
+	ik_pose.ApplyRig(targetA_character.ik_rig, mController.GetDeltaTime() * mController.GetPlaybackSpeed());
+	targetA_character.locals = targetA_character.ik_rig.pose;
+
+	ik_pose.ApplyRig(targetB_character.ik_rig, mController.GetDeltaTime() * mController.GetPlaybackSpeed());
+	targetB_character.locals = targetB_character.ik_rig.pose;
+
 
 	source_character.UpdateFinalModelTransform(false);
-	target_character.UpdateFinalModelTransform(false);
+	targetA_character.UpdateFinalModelTransform(false);
+	targetB_character.UpdateFinalModelTransform(false);
 
 	source_character.UpdateRenderItem();
-	target_character.UpdateRenderItem();
+	targetA_character.UpdateRenderItem();
+	targetB_character.UpdateRenderItem();
 
 }
 
@@ -924,8 +919,10 @@ void Engine::UpdateGUI()
 	{
 		ImGui::Text("Source Character");
 		source_character.db.OnGui();
-		ImGui::Text("Target Character");
-		target_character.db.OnGui();
+		ImGui::Text("TargetA Character");
+		targetA_character.db.OnGui();
+		ImGui::Text("TargetB Character");
+		targetB_character.db.OnGui();
 		mController.OnGui();
 		
 		ImGui::End();
@@ -1143,21 +1140,21 @@ void Engine::LoadTargetAModel()
 
 
 	FBXLoader fbxLoader;
-	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
-		mSkinnedSubsets, mSkinnedMats, target_character.db);
-	target_character.name = "Target_Maximo";
-	target_character.transform.mScale.mValue = Vector3(0.05f, 0.05f, 0.05f);
-	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
+	fbxLoader.LoadBindPose(targetA_bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, targetA_character.db);
+	targetA_character.name = "TargetA_Maximo";
+	targetA_character.transform.mScale.mValue = Vector3(0.05f, 0.05f, 0.05f);
+	targetA_character.transform.mTrans.mValue = Vector3(-10.0f, 0.0f, 0.0f);
 
-	target_character.db.graphic_debug = &graphic_debug;
+	targetA_character.db.graphic_debug = &graphic_debug;
 
-	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), true);
+	targetA_character.ik_rig.Init(&targetA_character.db, &targetA_character.db.GetBindPose(), true);
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
 	const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = target_character.name;
+	geo->Name = targetA_character.name;
 
 	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
 	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
@@ -1181,7 +1178,7 @@ void Engine::LoadTargetAModel()
 	for (UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
 	{
 		SubmeshGeometry submesh;
-		std::string name = "target_sm_" + std::to_string(i);
+		std::string name = "targetA_sm_" + std::to_string(i);
 		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
 		submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
 		submesh.BaseVertexLocation = 0;
@@ -1200,46 +1197,64 @@ void Engine::LoadTargetBModel()
 
 
 	FBXLoader fbxLoader;
-	fbxLoader.LoadBindPose(target_bind_pose_filename, vertices, indices,
-		mSkinnedSubsets, mSkinnedMats, target_character.db);
-	target_character.name = "Target_Maximo";
-	target_character.transform.mScale.mValue = Vector3(0.02f, 0.02f, 0.02f);
-	target_character.transform.mTrans.mValue = Vector3(5.0f, 0.0f, 0.0f);
+	fbxLoader.LoadBindPose(targetB_bind_pose_filename, vertices, indices,
+		mSkinnedSubsets, mSkinnedMats, targetB_character.db);
+	targetB_character.name = "TargetB_Maximo";
+	targetB_character.transform.mScale.mValue = Vector3(0.02f, 0.02f, 0.02f);
+	targetB_character.transform.mTrans.mValue = Vector3(10.0f, 0.0f, 0.0f);
 
-	target_character.db.graphic_debug = &graphic_debug;
+	targetB_character.db.graphic_debug = &graphic_debug;
 
-	target_character.ik_rig.Init(&target_character.db, &target_character.db.GetBindPose(), false);
+	targetB_character.ik_rig.Init(&targetB_character.db, &targetB_character.db.GetBindPose(), false);
 	{
 		// Init Ik Rig
-		target_character.ik_rig.AddPoint("hip", "hip");
+		targetB_character.ik_rig.AddPoint("hip", "hip");
 
-		target_character.ik_rig.AddPoint("head", "head");
-		target_character.ik_rig.AddPoint("neck", "neck");
-		target_character.ik_rig.AddPoint("chest", "chest");
-		target_character.ik_rig.AddPoint("foot_l", "lFoot");
-		target_character.ik_rig.AddPoint("foot_r", "rFoot");
+		targetB_character.ik_rig.AddPoint("head", "head");
+		targetB_character.ik_rig.AddPoint("neck", "neck");
+		targetB_character.ik_rig.AddPoint("chest", "chest");
+		targetB_character.ik_rig.AddPoint("foot_l", "lFoot");
+		targetB_character.ik_rig.AddPoint("foot_r", "rFoot");
 
-		target_character.ik_rig.AddChain("leg_r", { "rThigh", "rShin", "rAnkle" }, "rFoot", "ThreeBone");
-		target_character.ik_rig.AddChain("leg_l", { "lThigh", "lShin", "lAnkle" }, "lFoot", "ThreeBone");
+		targetB_character.ik_rig.AddChain("leg_r", { "rThigh", "rShin", "rAnkle" }, "rFoot", "ThreeBone");
+		targetB_character.ik_rig.AddChain("leg_l", { "lThigh", "lShin", "lAnkle" }, "lFoot", "ThreeBone");
 
-		//target_character.ik_rig.AddChain("spine", { "Spine", "Spine1", "Spine2" }, "", ""); // TODO
+		//target_character.ik_rig.AddChain("arm_r", { "rArm", "rForearm" }, "rHand", "TwoBone");
+		//target_character.ik_rig.AddChain("arm_l", { "lArm", "lForearm" }, "lHand", "TwoBone");
 
-		target_character.ik_rig.points["head"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
 
-		target_character.ik_rig.points["foot_l"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
-		target_character.ik_rig.points["foot_r"].SetAlt(Vector3::Forward, Vector3::Up, target_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+		targetB_character.ik_rig.AddSpringBoneChain("tail", { "tail01", "tail02", "tail03", "tail04", 
+			 "tail05" , "tail06" , "tail07" , "tail08" ,
+			 "tail09" , "tail10" /*, "tail11" , "tail12" ,
+			 "tail13" , "tail14" , "tail15" , "tail16" ,
+			 "tail17" */});
 
-		target_character.ik_rig.chains["leg_l"].SetAlt(Vector3::Down, Vector3::Forward, target_character.ik_rig.tpose_world); // Look = Forward, Twist = Down
-		target_character.ik_rig.chains["leg_r"].SetAlt(Vector3::Down, Vector3::Forward, target_character.ik_rig.tpose_world);
+		/*target_character.ik_rig.AddSpringBoneChain("tail", { "tail01", "tail03", "tail05", "tail07",
+			 "tail09" , "tail11",  "tail13" ,
+			 "tail15",  "tail17" });*/
 
-		//target_character.ik_rig.chains["spine"].SetAlt(Vector3::Up, Vector3::Forward, target_character.ik_rig.tpose_world); // Look = Up, Twist = Forward
+		targetB_character.ik_rig.AddChain("spine", { "chest", "neck1"}, "", ""); // TODO
+
+		targetB_character.ik_rig.points["head"].SetAlt(Vector3::Forward, Vector3::Up, targetB_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+
+		targetB_character.ik_rig.points["foot_l"].SetAlt(Vector3::Forward, Vector3::Up, targetB_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+		targetB_character.ik_rig.points["foot_r"].SetAlt(Vector3::Forward, Vector3::Up, targetB_character.ik_rig.tpose_world); // Look = Fwd, Twist = Up
+
+		targetB_character.ik_rig.chains["leg_l"].SetAlt(Vector3::Down, Vector3::Forward, targetB_character.ik_rig.tpose_world); // Look = Forward, Twist = Down
+		targetB_character.ik_rig.chains["leg_r"].SetAlt(Vector3::Down, Vector3::Forward, targetB_character.ik_rig.tpose_world);
+
+		//target_character.ik_rig.chains["arm_l"].SetAlt(Vector3::Right, Vector3::Backward, target_character.ik_rig.tpose_world);
+		//target_character.ik_rig.chains["arm_r"].SetAlt(Vector3::Left, Vector3::Backward, target_character.ik_rig.tpose_world);
+
+
+		targetB_character.ik_rig.chains["spine"].SetAlt(Vector3::Up, Vector3::Forward, targetB_character.ik_rig.tpose_world); // Look = Up, Twist = Forward
 	}
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);
     const UINT ibByteSize = static_cast<UINT>(indices.size()) * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = target_character.name;
+	geo->Name = targetB_character.name;
 
 	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
 	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
@@ -1263,7 +1278,7 @@ void Engine::LoadTargetBModel()
 	for(UINT i = 0; i < (UINT)mSkinnedSubsets.size(); ++i)
 	{
 		SubmeshGeometry submesh;
-		std::string name = "target_sm_" + std::to_string(i);
+		std::string name = "targetB_sm_" + std::to_string(i);
 		submesh.IndexCount = (UINT)mSkinnedSubsets[i].FaceCount * 3;
         submesh.StartIndexLocation = mSkinnedSubsets[i].FaceStart * 3;
         submesh.BaseVertexLocation = 0;
@@ -1287,10 +1302,10 @@ void Engine::LoadSourceModel()
 		mSkinnedSubsets, mSkinnedMats, source_character.db);
 	source_character.name = "Source_Maximo";
 	source_character.transform.mScale.mValue = Vector3(0.05f, 0.05f, 0.05f);
-	source_character.transform.mTrans.mValue = Vector3(-5.0f, 0.0f, 0.0f);
+	source_character.transform.mTrans.mValue = Vector3(0.0f, 0.0f, 0.0f);
 	source_character.db.graphic_debug = &graphic_debug;
 
-	fbxLoader.LoadFBXClip(mAnimationFilename[2], source_character.db);
+	fbxLoader.LoadFBXClip(mAnimationFilename[5], source_character.db);
 
 	source_character.ik_rig.Init(&source_character.db, &source_character.db.GetBindPose(), true);
 
@@ -1401,17 +1416,17 @@ void Engine::BuildRenderItems()
 	//	mAllRitems.push_back(std::move(lineRitem));
 	//}
 
-	std::string skeleton_name = target_character.name;
+	std::string skeleton_name = targetB_character.name;
 	if (mGeometries[skeleton_name]!=NULL)
 	{
 		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
 		{
-			std::string submeshName = "target_sm_" + std::to_string(i);
+			std::string submeshName = "targetB_sm_" + std::to_string(i);
 
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, target_character.scale);
+			XMStoreFloat4x4(&ritem->World, targetB_character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;
@@ -1430,7 +1445,41 @@ void Engine::BuildRenderItems()
 			//ritem->SkinnedModelInst = mSamplers[0];
 
 			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
-			target_character.ritems.push_back(ritem.get());
+			targetB_character.ritems.push_back(ritem.get());
+			mAllRitems.push_back(std::move(ritem));
+		}
+	}
+
+	skeleton_name = targetA_character.name;
+	if (mGeometries[skeleton_name] != NULL)
+	{
+		for (UINT i = 0; i < mGeometries[skeleton_name]->DrawArgs.size(); ++i)
+		{
+			std::string submeshName = "targetA_sm_" + std::to_string(i);
+
+			auto ritem = std::make_unique<RenderItem>();
+
+			// Reflect to change coordinate system from the RHS the data was exported out as.
+			XMStoreFloat4x4(&ritem->World, targetA_character.scale);
+
+			ritem->TexTransform = MathHelper::Identity4x4();
+			ritem->ObjCBIndex = objCBIndex++;
+			ritem->Mat = mMaterials[mSkinnedMats[i].Name].get();
+			ritem->Geo = mGeometries[skeleton_name].get();
+			ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			ritem->IndexCount = ritem->Geo->DrawArgs[submeshName].IndexCount;
+			ritem->StartIndexLocation = ritem->Geo->DrawArgs[submeshName].StartIndexLocation;
+			ritem->BaseVertexLocation = ritem->Geo->DrawArgs[submeshName].BaseVertexLocation;
+			ritem->Color = Colors::White;
+
+			// All render items for this solider.m3d instance share
+			// the same skinned model instance.
+			ritem->SkinnedCBIndex = 0;
+			ritem->IsSkinned = true;
+			//ritem->SkinnedModelInst = mSamplers[0];
+
+			mRitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ritem.get());
+			targetA_character.ritems.push_back(ritem.get());
 			mAllRitems.push_back(std::move(ritem));
 		}
 	}
@@ -1445,7 +1494,7 @@ void Engine::BuildRenderItems()
 			auto ritem = std::make_unique<RenderItem>();
 
 			// Reflect to change coordinate system from the RHS the data was exported out as.
-			XMStoreFloat4x4(&ritem->World, target_character.scale);
+			XMStoreFloat4x4(&ritem->World, source_character.scale);
 
 			ritem->TexTransform = MathHelper::Identity4x4();
 			ritem->ObjCBIndex = objCBIndex++;

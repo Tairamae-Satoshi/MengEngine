@@ -259,6 +259,7 @@
     <ClInclude Include="Animation\SamplingJob.h" />
     <ClInclude Include="Animation\AnimationDatabase.h" />
     <ClInclude Include="Animation\Spring.h" />
+    <ClInclude Include="Animation\SpringBoneJob.h" />
     <ClInclude Include="Animation\Utils.h" />
     <ClInclude Include="Common\Align.h" />
     <ClInclude Include="Common\Camera.h" />

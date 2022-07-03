@@ -46,9 +46,9 @@ struct Transform
 
 		DirectX::SimpleMath::Matrix m = m1 * m2;
 
-		*this = FromMatrix(m);
+		//*this = FromMatrix(m);
 
-		return *this;
+		return FromMatrix(m);
 	}
 
 	Transform Add(const DirectX::SimpleMath::Quaternion& rot, const DirectX::SimpleMath::Vector3& trans, const DirectX::SimpleMath::Vector3& scale)

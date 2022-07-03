@@ -66,7 +66,7 @@ namespace Animation
 	class IKPose
 	{
 	public:
-		void ApplyRig(IKRig& rig);
+		void ApplyRig(IKRig& rig, float dt);
 
 		void ApplyHip(IKRig& ik_rig);
 
@@ -77,6 +77,8 @@ namespace Animation
 		void ApplySpine(IKRig& ik_rig, const IKChain& ik_chain, const std::vector<LookTwistIKData>& ik_lts);
 
 		void ApplyLookTwist(IKRig& ik_rig, const IKPoint& ik_point, const LookTwistIKData& ik_lt);
+
+		void ApplySpringBone(IKRig& ik_rig, const IKChain& ik_chain, SpringBoneJob& spring_bone, float dt);
 
 		HipIKData hip;
 
