@@ -923,6 +923,27 @@ void Engine::UpdateGUI()
 		targetA_character.db.OnGui();
 		ImGui::Text("TargetB Character");
 		targetB_character.db.OnGui();
+
+		const char* items[Animation_Num];
+		std::vector<std::string> names;
+		for (int i = 0; i < Animation_Num; i++)
+		{
+			std::string animation_name = source_character.db.GetAnimationClipName(i);
+			names.push_back(animation_name);
+			items[i] = names.back().data();
+		}
+		static int item_current = 5;
+		int temp = item_current;
+		ImGui::Combo("combo", &item_current, items, IM_ARRAYSIZE(items));
+		std::string animation_name = source_character.db.GetAnimationClipName(item_current);
+		sampler.animation = source_character.db.GetAnimationClipByName(animation_name);
+		if (temp != item_current)
+		{
+			targetA_character.ik_rig.Reset();
+			targetB_character.ik_rig.Reset();
+			temp = item_current;
+		}
+
 		mController.OnGui();
 		
 		ImGui::End();
@@ -1225,9 +1246,9 @@ void Engine::LoadTargetBModel()
 
 		targetB_character.ik_rig.AddSpringBoneChain("tail", { "tail01", "tail02", "tail03", "tail04", 
 			 "tail05" , "tail06" , "tail07" , "tail08" ,
-			 "tail09" , "tail10" /*, "tail11" , "tail12" ,
+			 "tail09" , "tail10" , "tail11" , "tail12" ,
 			 "tail13" , "tail14" , "tail15" , "tail16" ,
-			 "tail17" */});
+			 "tail17" });
 
 		/*target_character.ik_rig.AddSpringBoneChain("tail", { "tail01", "tail03", "tail05", "tail07",
 			 "tail09" , "tail11",  "tail13" ,
@@ -1305,11 +1326,14 @@ void Engine::LoadSourceModel()
 	source_character.transform.mTrans.mValue = Vector3(0.0f, 0.0f, 0.0f);
 	source_character.db.graphic_debug = &graphic_debug;
 
-	fbxLoader.LoadFBXClip(mAnimationFilename[5], source_character.db);
+	for (int i = 0; i < Animation_Num; i++)
+	{
+		fbxLoader.LoadFBXClip(mAnimationFilename[i], source_character.db);
+	}
 
 	source_character.ik_rig.Init(&source_character.db, &source_character.db.GetBindPose(), true);
 
-	std::string animation_name = source_character.db.GetAnimationClipName(0);
+	std::string animation_name = source_character.db.GetAnimationClipName(5);
 	sampler.animation = source_character.db.GetAnimationClipByName(animation_name);
 
 	const UINT vbByteSize = static_cast<UINT>(vertices.size()) * sizeof(Animation::SkinnedVertex);

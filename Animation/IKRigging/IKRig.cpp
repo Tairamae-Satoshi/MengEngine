@@ -128,6 +128,14 @@ namespace Animation
 
 	}
 
+	void IKRig::Reset()
+	{
+		for (auto& spring_bone : spring_bones)
+		{
+			spring_bone.second.is_pos_reset = false;
+		}
+	}
+
 	void IKRig::Init_Mixamo_Rig()
 	{
 		this->AddPoint("hip", "Hips");

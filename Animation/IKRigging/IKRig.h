@@ -20,6 +20,8 @@ namespace Animation
 
 		void UpdateWorld();
 
+		void Reset();
+
 		void Init_Mixamo_Rig();
 
 		const std::vector<Transform>* tpose;

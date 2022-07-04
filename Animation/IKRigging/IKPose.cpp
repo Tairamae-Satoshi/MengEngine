@@ -31,31 +31,6 @@ namespace Animation
 		rig.UpdateWorld();
 	}
 
-	/*void ApplyRig(IKRig& rig)
-	{
-		rig.pose = *rig.tpose;
-		rig.UpdateWorld();
-
-		this->ApplyHip(rig);
-		rig.UpdateWorld();
-
-		this->ApplySpine(rig, rig.chains["spine"], spine);
-		rig.UpdateWorld();
-
-		this->ApplyLimb(rig, rig.chains["leg_l"], leg_l);
-		this->ApplyLimb(rig, rig.chains["leg_r"], leg_r);
-		this->ApplyLimb(rig, rig.chains["arm_l"], arm_l);
-		this->ApplyLimb(rig, rig.chains["arm_r"], arm_r);
-		rig.UpdateWorld();
-
-		this->ApplyLookTwist(rig, rig.points["head"], head);
-		this->ApplyLookTwist(rig, rig.points["foot_l"], foot_l);
-		this->ApplyLookTwist(rig, rig.points["foot_r"], foot_r);
-		this->ApplyLookTwist(rig, rig.points["hand_l"], hand_l);
-		this->ApplyLookTwist(rig, rig.points["hand_r"], hand_r);
-		rig.UpdateWorld();
-	}*/
-
 	void IKPose::ApplyHip(IKRig& ik_rig)
 	{
 		// First step is we need to get access to the Rig's TPose and Pose Hip Bone.
@@ -331,10 +306,6 @@ namespace Animation
 
 	}
 
-	bool IsVector3Equal(const Vector3& a, const Vector3& b)
-	{
-		return (a - b).LengthSquared() < 1e-6 ? true : false;
-	}
 
 	void IKPose::ApplySpringBone(IKRig& ik_rig, const IKChain& ik_chain, SpringBoneJob& spring_bone, float dt)
 	{
@@ -356,39 +327,39 @@ namespace Animation
 			joints_tran_l.push_back(ik_rig.pose[idx]);
 		}
 		spring_bone.joints_l_t = joints_tran_l;
-		//spring_bone.Run(dt);
-		for (int i = 0; i < spring_bone.joints.size(); i++)
-		{
-			spring_bone.joint_correction_l_t[i] = spring_bone.joints_l_t[i];
-		}
+		spring_bone.Run(dt);
+		//for (int i = 0; i < spring_bone.joints.size(); i++)
+		//{
+		//	spring_bone.joint_correction_l_t[i] = spring_bone.joints_l_t[i];
+		//}
 
-		for (int i = 0; i < spring_bone.joints.size() - 1; i++)
-		{
-			Transform joint_w_t = spring_bone.parent_w_t.Add(spring_bone.joints_l_t[i]);
+		//for (int i = 0; i < spring_bone.joints.size() - 1; i++)
+		//{
+		//	Transform joint_w_t = spring_bone.parent_w_t.Add(spring_bone.joints_l_t[i]);
 
-			float bone_len = spring_bone.joints_l_t[i + 1].mTrans.mValue.Length();
-			Vector3 tail = Vector3(0.0f, 0.0f, bone_len);
-			tail = Vector3::Transform(tail, Transform::ToMatrix(joint_w_t));
+		//	float bone_len = spring_bone.joints_l_t[i + 1].mTrans.mValue.Length();
+		//	Vector3 tail = Vector3(0.0f, 0.0f, bone_len);
+		//	tail = Vector3::Transform(tail, Transform::ToMatrix(joint_w_t));
 
-			//Vector3 pos = spring_bone.joints[i].spring.position;
-			//Vector3 pos_w = Vector3::Transform(Vector3(0.0f, 0.0f, -bone_len), Transform::ToMatrix(ik_rig.pose_world[spring_bone.joints[i].idx]));
-			spring_bone.joints[i].spring.Update(dt, tail);
-			Vector3 spring_pos = spring_bone.joints[i].spring.position;
+		//	//Vector3 pos = spring_bone.joints[i].spring.position;
+		//	//Vector3 pos_w = Vector3::Transform(Vector3(0.0f, 0.0f, -bone_len), Transform::ToMatrix(ik_rig.pose_world[spring_bone.joints[i].idx]));
+		//	spring_bone.joints[i].spring.Update(dt, tail);
+		//	Vector3 spring_pos = spring_bone.joints[i].spring.position;
 
-			Vector3 resting_dir = (tail - joint_w_t.mTrans.mValue).Normalized(); // Dir to resting position
-			Vector3 spring_dir = (spring_pos - joint_w_t.mTrans.mValue).Normalized(); // Dir to spring position
-			//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 1.0f, 0.0f), resting_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Red));
-			//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 0.0f, 0.0f), spring_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Blue));
+		//	Vector3 resting_dir = (tail - joint_w_t.mTrans.mValue).Normalized(); // Dir to resting position
+		//	Vector3 spring_dir = (spring_pos - joint_w_t.mTrans.mValue).Normalized(); // Dir to spring position
+		//	//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 1.0f, 0.0f), resting_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Red));
+		//	//ik_rig.skeleton->graphic_debug->DrawLine(joint_w_t.mTrans.mValue * 0.02f + Vector3(5.0f, 0.0f, 0.0f), spring_dir, bone_len * 0.02f, Vector4(DirectX::Colors::Blue));
 
-			Quaternion rot = IsVector3Equal(resting_dir, spring_dir) ? Quaternion::Identity : Quaternion::CreateFromVectors(resting_dir, spring_dir);
-			Quaternion temp = rot;
-			rot = joint_w_t.mRot.mValue * rot * spring_bone.parent_w_t.mRot.mValue.Inversed();
+		//	Quaternion rot = IsVector3Equal(resting_dir, spring_dir) ? Quaternion::Identity : Quaternion::CreateFromVectors(resting_dir, spring_dir);
+		//	Quaternion temp = rot;
+		//	rot = joint_w_t.mRot.mValue * rot * spring_bone.parent_w_t.mRot.mValue.Inversed();
 
-			spring_bone.joint_correction_l_t[i].mRot.mValue = rot;
-			float w = rot.w;
-			spring_bone.parent_w_t = spring_bone.parent_w_t.Add(spring_bone.joint_correction_l_t[i]);
-			//LOG("1");
-		}
+		//	spring_bone.joint_correction_l_t[i].mRot.mValue = rot;
+		//	float w = rot.w;
+		//	spring_bone.parent_w_t = spring_bone.parent_w_t.Add(spring_bone.joint_correction_l_t[i]);
+		//	//LOG("1");
+		//}
 
 		for (int i = 0; i < ik_chain.joints.size(); i++) {
 			int idx = ik_chain.joints[i];
