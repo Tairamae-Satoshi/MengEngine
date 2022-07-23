@@ -34,7 +34,7 @@ This is a skeleton animation engine for studying character animation by implemen
 
 * Animation Blending
 
-  ![AnimationBlend](/Contents/Gif/AnimationBlend.gif)
+  ![AnimationBlend](/Contents/Gif/AnimationBlending.gif)
 
 * Two Bone IK and Look at IK
 
