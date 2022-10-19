@@ -182,7 +182,7 @@ namespace Animation
 	struct LeftFootPositionFeature :Feature{
 		virtual int Size() const override
 		{
-			return 3; // p1.x, p1.y, p2.x, p2.y, p3.x, p3.y 
+			return 3; 
 		}
 
 		virtual void EvaluateForAnimationPose(
@@ -210,7 +210,7 @@ namespace Animation
 			// Need trasform the coordinate relative to simulation rotation
 			ResultLocation[0] = bone_position.x;
 			ResultLocation[1] = bone_position.y;
-			ResultLocation[2] = bone_position.x;
+			ResultLocation[2] = bone_position.z;
 
 		}
 
@@ -236,7 +236,7 @@ namespace Animation
 			// Need trasform the coordinate relative to simulation rotation
 			ResultLocation[0] = bone_position.x;
 			ResultLocation[1] = bone_position.y;
-			ResultLocation[2] = bone_position.x;
+			ResultLocation[2] = bone_position.z;
 
 		}
 	};
@@ -244,7 +244,7 @@ namespace Animation
 	struct RightFootPositionFeature :Feature {
 		virtual int Size() const override
 		{
-			return 3; // p1.x, p1.y, p2.x, p2.y, p3.x, p3.y 
+			return 3; 
 		}
 
 		virtual void EvaluateForAnimationPose(
@@ -272,7 +272,7 @@ namespace Animation
 			// Need trasform the coordinate relative to simulation rotation
 			ResultLocation[0] = bone_position.x;
 			ResultLocation[1] = bone_position.y;
-			ResultLocation[2] = bone_position.x;
+			ResultLocation[2] = bone_position.z;
 
 		}
 
@@ -298,7 +298,7 @@ namespace Animation
 			// Need trasform the coordinate relative to simulation rotation
 			ResultLocation[0] = bone_position.x;
 			ResultLocation[1] = bone_position.y;
-			ResultLocation[2] = bone_position.x;
+			ResultLocation[2] = bone_position.z;
 
 		}
 	};
