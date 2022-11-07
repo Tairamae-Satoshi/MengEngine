@@ -1,6 +1,6 @@
 # README
 
-####Introduction
+#### Introduction
 
 This is a skeleton animation engine for studying character animation by implementing them.
 
